@@ -1,0 +1,1756 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>帳務轉換工具</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
+  import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
+    from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBJ5LsQmi1hFusCS-7OJ9Z0TBoz31ebq14",
+    authDomain: "accounting-tool-a9ac6.firebaseapp.com",
+    projectId: "accounting-tool-a9ac6",
+    storageBucket: "accounting-tool-a9ac6.firebasestorage.app",
+    messagingSenderId: "225722892064",
+    appId: "1:225722892064:web:3c71be9c0635dcc1272145",
+    measurementId: "G-M56DF57TB0"
+  };
+
+  const ALLOWED_DOMAIN = "openrealty.com.tw";
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const provider = new GoogleAuthProvider();
+  provider.setCustomParameters({ hd: ALLOWED_DOMAIN });
+
+  // 監聽登入狀態
+  onAuthStateChanged(auth, user => {
+    if(user){
+      const domain = user.email.split("@")[1];
+      if(domain !== ALLOWED_DOMAIN){
+        // 非公司帳號，強制登出
+        signOut(auth);
+        showLoginPage("此工具僅限 @" + ALLOWED_DOMAIN + " 帳號使用");
+        return;
+      }
+      // 公司帳號，顯示工具
+      document.getElementById("login-page").style.display = "none";
+      document.getElementById("app-page").style.display = "block";
+      document.getElementById("user-name").textContent = user.displayName || user.email;
+      document.getElementById("user-email").textContent = user.email;
+    } else {
+      showLoginPage("");
+    }
+  });
+
+  function showLoginPage(errMsg){
+    document.getElementById("login-page").style.display = "flex";
+    document.getElementById("app-page").style.display = "none";
+    document.getElementById("login-error").textContent = errMsg;
+  }
+
+  // 登入按鈕
+  window.handleLogin = async function(){
+    try{
+      await signInWithPopup(auth, provider);
+    } catch(e){
+      document.getElementById("login-error").textContent = "登入失敗，請再試一次";
+    }
+  };
+
+  // 登出按鈕
+  window.handleLogout = async function(){
+    await signOut(auth);
+  };
+</script>
+<style>
+:root {
+  --bg: #F4F5F7;
+  --surface: #FFFFFF;
+  --ink: #1A2130;
+  --ink-soft: #556070;
+  --ink-faint: #94A0AE;
+  --accent: #0D6B56;
+  --accent-dk: #094D3D;
+  --accent-soft: #E4F1EC;
+  --warn: #B45208;
+  --warn-soft: #FDF1E2;
+  --danger: #B22318;
+  --danger-soft: #FBEAE8;
+  --ok: #0D6B56;
+  --border: #DDE1E9;
+  --mono: "SF Mono","JetBrains Mono",Consolas,"Courier New",monospace;
+  --sans: -apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC","Microsoft JhengHei","Segoe UI",system-ui,sans-serif;
+  --radius: 9px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.55;-webkit-font-smoothing:antialiased;font-size:14px;}
+.app{max-width:1200px;margin:0 auto;padding:0 28px 80px;}
+
+/* ── header ── */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:26px 0 18px;border-bottom:1px solid var(--border);margin-bottom:24px;gap:12px;flex-wrap:wrap;}
+.topbar h1{font-size:19px;font-weight:700;letter-spacing:.01em;display:flex;align-items:center;gap:10px;}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--accent);flex-shrink:0;}
+.badge{font-size:11.5px;font-family:var(--mono);color:var(--ink-faint);}
+
+/* ── tabs ── */
+.tabs{display:flex;gap:4px;margin-bottom:22px;}
+.tab{padding:9px 20px;border-radius:7px;font-size:13.5px;font-weight:600;cursor:pointer;border:1.5px solid var(--border);background:var(--surface);color:var(--ink-soft);transition:all .12s;}
+.tab.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+.tab:hover:not(.active){border-color:var(--accent);color:var(--accent);}
+
+/* ── panel ── */
+.panel{display:none;}.panel.active{display:block;}
+
+/* ── upload zone ── */
+.upload-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px;}
+@media(max-width:680px){.upload-row{grid-template-columns:1fr;}}
+.dropzone{border:1.5px dashed var(--border);border-radius:var(--radius);background:var(--surface);padding:28px 20px;text-align:center;cursor:pointer;transition:border-color .14s,background .14s;}
+.dropzone:hover,.dropzone.dragover{border-color:var(--accent);background:var(--accent-soft);}
+.dropzone .dz-icon{font-size:22px;margin-bottom:6px;opacity:.65;}
+.dropzone .dz-label{font-size:13px;font-weight:600;margin-bottom:3px;}
+.dropzone .dz-hint{font-size:12px;color:var(--ink-soft);}
+.dropzone.loaded{border-style:solid;border-color:var(--accent);background:var(--accent-soft);}
+.dropzone.loaded .dz-icon::after{content:" ✓";}
+
+/* ── error ── */
+.errbox{display:none;margin-top:10px;padding:11px 14px;background:var(--danger-soft);border:1px solid #EEC5C0;border-radius:7px;color:var(--danger);font-size:13px;}
+
+/* ── card ── */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:20px;overflow:hidden;}
+.card-head{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+.card-title{font-size:14px;font-weight:700;}
+.card-meta{font-size:12px;color:var(--ink-soft);}
+
+/* ── stats bar ── */
+.statsbar{display:flex;flex-wrap:wrap;gap:0;border-bottom:1px solid var(--border);}
+.stat{padding:14px 20px;border-right:1px solid var(--border);}
+.stat:last-child{border-right:none;}
+.stat .num{font-family:var(--mono);font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;}
+.stat .num.warn{color:var(--warn);}
+.stat .num.ok{color:var(--ok);}
+.stat .lbl{font-size:11.5px;color:var(--ink-soft);margin-top:2px;}
+
+/* ── table ── */
+.tbl-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:13px;min-width:820px;}
+thead th{text-align:left;font-size:11.5px;font-weight:700;color:var(--ink-soft);padding:9px 12px;border-bottom:2px solid var(--ink);background:var(--surface);white-space:nowrap;position:sticky;top:0;}
+tbody td{padding:8px 12px;border-bottom:1px solid var(--border);vertical-align:middle;white-space:nowrap;}
+tbody tr:last-child td{border-bottom:none;}
+tr.matched{background:#fff;}
+tr.unmatched{background:var(--warn-soft);}
+tr.bank-only{background:#F0F4FF;}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums;}
+.right{text-align:right;}
+.tag{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;white-space:nowrap;}
+.tag.ok{background:var(--accent-soft);color:var(--accent-dk);}
+.tag.warn{background:var(--warn-soft);color:var(--warn);}
+.tag.blue{background:#EEF2FF;color:#3B4FCC;}
+.tag.grey{background:#F0F2F5;color:#556070;}
+
+/* ── select / input ── */
+select,input.inp{font-family:var(--sans);font-size:13px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--ink);}
+select:focus,input.inp:focus{outline:2px solid var(--accent);outline-offset:1px;}
+select.empty{border-color:var(--warn);color:var(--ink-faint);}
+input.inp{font-family:var(--mono);width:130px;}
+
+/* ── action bar ── */
+.actbar{padding:14px 18px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+.bal{font-family:var(--mono);font-size:13px;font-variant-numeric:tabular-nums;}
+.bal .ok{color:var(--ok);font-weight:700;}
+.bal .warn{color:var(--warn);}
+.btns{display:flex;gap:8px;flex-wrap:wrap;}
+button.btn{font-family:var(--sans);font-size:13px;font-weight:600;padding:9px 16px;border-radius:7px;border:1px solid transparent;cursor:pointer;transition:opacity .1s,background .1s;}
+button.btn.primary{background:var(--accent);color:#fff;}
+button.btn.primary:hover{background:var(--accent-dk);}
+button.btn.primary:disabled{background:var(--ink-faint);cursor:not-allowed;}
+button.btn.secondary{background:var(--surface);color:var(--ink-soft);border-color:var(--border);}
+button.btn.secondary:hover{border-color:var(--ink-faint);color:var(--ink);}
+button.btn.ghost{background:transparent;color:var(--accent);border-color:var(--accent);}
+button.btn.ghost:hover{background:var(--accent-soft);}
+
+.hint{font-size:12px;color:var(--ink-soft);padding:8px 18px 12px;}
+[hidden]{display:none!important;}
+
+  /* ── 登入頁面 ── */
+  #login-page{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;background:var(--bg);}
+  .login-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:48px 40px;text-align:center;max-width:380px;width:90%;box-shadow:0 4px 24px rgba(0,0,0,.07);}
+  .login-card .logo{font-size:36px;margin-bottom:16px;}
+  .login-card h1{font-size:20px;font-weight:700;margin-bottom:6px;}
+  .login-card p{font-size:13.5px;color:var(--ink-soft);margin-bottom:28px;line-height:1.6;}
+  .btn-google{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:12px 20px;border-radius:8px;border:1.5px solid var(--border);background:var(--surface);font-size:14px;font-weight:600;cursor:pointer;transition:border-color .14s,background .14s;}
+  .btn-google:hover{border-color:var(--accent);background:var(--accent-soft);}
+  #login-error{margin-top:14px;font-size:13px;color:var(--danger);min-height:18px;}
+  .user-bar{display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--ink-soft);}
+  .user-bar strong{color:var(--ink);}
+  .btn-logout{font-size:12px;padding:4px 10px;border-radius:5px;border:1px solid var(--border);background:var(--surface);cursor:pointer;color:var(--ink-soft);}
+  .btn-logout:hover{border-color:var(--danger);color:var(--danger);}
+  #app-page{display:none;}
+
+/* ── section label ── */
+.sec-label{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint);padding:10px 18px 6px;}
+
+/* ── match summary ── */
+.match-summary{display:grid;grid-template-columns:repeat(3,1fr);border-bottom:1px solid var(--border);}
+.ms-cell{padding:14px 18px;border-right:1px solid var(--border);}
+.ms-cell:last-child{border-right:none;}
+.ms-cell .ms-num{font-size:22px;font-weight:700;font-family:var(--mono);}
+.ms-cell .ms-lbl{font-size:12px;color:var(--ink-soft);margin-top:2px;}
+.ms-cell.ok .ms-num{color:var(--ok);}
+.ms-cell.warn .ms-num{color:var(--warn);}
+.ms-cell.blue .ms-num{color:#3B4FCC;}
+</style>
+</head>
+<body>
+
+<!-- 登入頁面 -->
+<div id="login-page">
+  <div class="login-card">
+    <div class="logo">🏠</div>
+    <h1>帳務轉換工具</h1>
+    <p>此工具僅限全居資產管理內部使用<br>請使用公司 Google 帳號登入</p>
+    <button class="btn-google" onclick="handleLogin()">
+      <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+      使用 Google 帳號登入
+    </button>
+    <div id="login-error"></div>
+  </div>
+</div>
+
+<!-- 主工具頁面 -->
+<div id="app-page">
+<div class="app">
+
+<header class="topbar">
+  <h1><span class="dot"></span>帳務轉換工具</h1>
+  <div style="display:flex;align-items:center;gap:16px;">
+    <div class="user-bar">
+      已登入：<strong id="user-name"></strong>
+      <span id="user-email" style="color:var(--ink-faint);font-size:11.5px;"></span>
+    </div>
+    <button class="btn-logout" onclick="handleLogout()">登出</button>
+  </div>
+</header>
+  <span class="badge">房源 282 筆 · 房管處帳戶 1 組 · 業務處帳戶 1 組</span>
+</header>
+
+<!-- 部門 Tab -->
+<div class="tabs">
+  <button class="tab active" data-tab="fang">🏠 房管處</button>
+  <button class="tab" data-tab="biz">💼 業務處</button>
+</div>
+
+<!-- ══════════════════════════════════════════
+     房管處 Panel
+════════════════════════════════════════════ -->
+<div class="panel active" id="panel-fang">
+
+  <!-- 上傳區 -->
+  <div id="fang-upload">
+    <div class="upload-row" style="grid-template-columns:1fr 1fr 1fr;">
+      <div>
+        <div class="dropzone" id="fang-dz-bank">
+          <div class="dz-icon">🏦</div>
+          <div class="dz-label">上傳網銀明細</div>
+          <div class="dz-hint">全居YYYYMMDD-MMDD_xls.xlsx</div>
+        </div>
+        <input type="file" id="fang-file-bank" accept=".xlsx" hidden>
+      </div>
+      <div>
+        <div class="dropzone" id="fang-dz-third">
+          <div class="dz-icon">📋</div>
+          <div class="dz-label">上傳帳務管理報表</div>
+          <div class="dz-hint">YYYY-MM-DD-帳務管理報表.xlsx</div>
+        </div>
+        <input type="file" id="fang-file-third" accept=".xlsx" hidden>
+      </div>
+      <div>
+        <div class="dropzone" id="fang-dz-receipt">
+          <div class="dz-icon">🧾</div>
+          <div class="dz-label">上傳房管處收款單</div>
+          <div class="dz-hint">房管處_收款單_MMDD-MMDD.xlsx（選填）</div>
+        </div>
+        <input type="file" id="fang-file-receipt" accept=".xlsx" hidden>
+      </div>
+    </div>
+    <!-- 第四個上傳框：正本金流表（選填，用於產出傳票） -->
+    <div style="margin-top:12px;padding:12px 0;border-top:1px dashed var(--border);">
+      <div style="font-size:12px;color:var(--ink-soft);margin-bottom:8px;">
+        📌 出納確認金流表補齊後，上傳正本金流表即可產出傳票匯入檔
+      </div>
+      <div class="upload-row" style="grid-template-columns:1fr 2fr;">
+        <div>
+          <div class="dropzone" id="fang-dz-cashflow">
+            <div class="dz-icon">📊</div>
+            <div class="dz-label">上傳正本金流表</div>
+            <div class="dz-hint">金流表_房管處_YYYY-MM-DD.xlsx（選填）</div>
+          </div>
+          <input type="file" id="fang-file-cashflow" accept=".xlsx" hidden>
+        </div>
+        <div style="display:flex;align-items:center;padding:0 16px;">
+          <div id="fang-cashflow-status" style="font-size:13px;color:var(--ink-soft);">
+            尚未上傳正本金流表，上傳後可產出傳票匯入檔
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="errbox" id="fang-err"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px;">
+      <button class="btn primary" id="fang-btn-match" disabled>開始比對</button>
+    </div>
+  </div>
+
+  <!-- 比對結果 -->
+  <div id="fang-result" hidden>
+
+    <!-- 統計 -->
+    <div class="card">
+      <div class="match-summary">
+        <div class="ms-cell ok">
+          <div class="ms-num" id="fang-cnt-matched">0</div>
+          <div class="ms-lbl">✓ 比對成功（第三方＋網銀吻合）</div>
+        </div>
+        <div class="ms-cell warn">
+          <div class="ms-num" id="fang-cnt-unmatched">0</div>
+          <div class="ms-lbl">⚠ 帳務報表未核對到網銀</div>
+        </div>
+        <div class="ms-cell blue">
+          <div class="ms-num" id="fang-cnt-bankonly">0</div>
+          <div class="ms-lbl">📥 網銀存入但無對應帳務報表</div>
+        </div>
+      </div>
+
+      <!-- 比對成功 -->
+      <div class="sec-label">✓ 比對成功 — 可轉換傳票</div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th>#</th><th>物件名稱</th><th>承租人</th>
+            <th>入帳日期</th><th class="right">金額</th>
+            <th>繳費帳號末五碼</th><th>收款帳戶</th>
+            <th>客戶供應商代號</th>
+          </tr></thead>
+          <tbody id="fang-tb-matched"></tbody>
+        </table>
+      </div>
+
+      <!-- 未核對到 -->
+      <div class="sec-label" style="margin-top:4px;border-top:2px solid var(--border);padding-top:10px;">⚠ 帳務報表未核對到網銀 — 出納待查</div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th>#</th><th>物件名稱</th><th>承租人</th>
+            <th>帳務日期</th><th class="right">存入金額</th>
+            <th>對方帳號</th><th>備註</th>
+          </tr></thead>
+          <tbody id="fang-tb-unmatched"></tbody>
+        </table>
+      </div>
+
+      <!-- 網銀未比對 → 第二輪收款單比對 -->
+      <div class="sec-label" style="margin-top:4px;border-top:2px solid var(--border);padding-top:10px;">📥 網銀存入但無對應帳務報表</div>
+      <div id="fang-bankonly-sub-matched" hidden>
+        <div style="padding:6px 18px 2px;font-size:12px;color:var(--ok);font-weight:600;">✓ 已透過收款單比對成功</div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr>
+              <th>#</th><th>網銀日期</th><th class="right">存入金額</th>
+              <th>備註</th><th>末五碼</th>
+              <th>收款單編號</th><th>收款類型</th><th>房源名稱</th><th>姓名</th>
+            </tr></thead>
+            <tbody id="fang-tb-bankonly-matched"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th>#</th><th>網銀日期</th><th class="right">存入金額</th>
+            <th>備註</th><th>虛擬帳號末五碼</th><th>對方帳號末五碼</th>
+            <th>狀態</th>
+          </tr></thead>
+          <tbody id="fang-tb-bankonly"></tbody>
+        </table>
+      </div>
+
+      <div class="actbar">
+        <div style="display:flex;flex-direction:column;gap:6px;flex:1;">
+          <div class="bal" id="fang-bal">—</div>
+          <div id="fang-reconcile-status" style="font-size:12.5px;"></div>
+        </div>
+        <div class="btns">
+          <button class="btn secondary" id="fang-btn-reset">重新上傳</button>
+          <button class="btn primary" id="fang-btn-cashflow" disabled>下載金流表</button>
+          <button class="btn primary" id="fang-btn-voucher" disabled>下載傳票匯入檔</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div><!-- /panel-fang -->
+
+
+<!-- ══════════════════════════════════════════
+     業務處 Panel
+════════════════════════════════════════════ -->
+<div class="panel" id="panel-biz">
+
+  <div id="biz-upload">
+    <div class="upload-row">
+      <div>
+        <div class="dropzone" id="biz-dz-bank" data-target="biz-bank">
+          <div class="dz-icon">🏦</div>
+          <div class="dz-label">上傳網銀明細</div>
+          <div class="dz-hint">全居YYYYMMDD-MMDD_xls.xlsx</div>
+        </div>
+        <input type="file" id="biz-file-bank" accept=".xlsx" hidden>
+      </div>
+      <div>
+        <div class="dropzone" id="biz-dz-ragic" data-target="biz-ragic">
+          <div class="dz-icon">📑</div>
+          <div class="dz-label">上傳 RAGIC 收款單</div>
+          <div class="dz-hint">收款單.xlsx</div>
+        </div>
+        <input type="file" id="biz-file-ragic" accept=".xlsx" hidden>
+      </div>
+    </div>
+    <div class="errbox" id="biz-err"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px;">
+      <button class="btn primary" id="biz-btn-match" disabled>開始比對</button>
+    </div>
+  </div>
+
+  <div id="biz-result" hidden>
+    <div class="card">
+      <div class="match-summary">
+        <div class="ms-cell ok">
+          <div class="ms-num" id="biz-cnt-matched">0</div>
+          <div class="ms-lbl">✓ 比對成功</div>
+        </div>
+        <div class="ms-cell warn">
+          <div class="ms-num" id="biz-cnt-unmatched">0</div>
+          <div class="ms-lbl">⚠ 收款單未核對到網銀</div>
+        </div>
+        <div class="ms-cell blue">
+          <div class="ms-num" id="biz-cnt-bankonly">0</div>
+          <div class="ms-lbl">📥 網銀存入但無對應收款單</div>
+        </div>
+      </div>
+
+      <!-- 比對成功 -->
+      <div class="sec-label">✓ 比對成功</div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th>#</th><th>收款單編號</th><th>收款日期</th>
+            <th class="right">金額</th><th>類型</th>
+            <th>轉號後五碼</th><th>地址</th><th>回報人員</th>
+            <th>收款帳戶</th><th>房客／屋主</th>
+          </tr></thead>
+          <tbody id="biz-tb-matched"></tbody>
+        </table>
+      </div>
+
+      <!-- 未核對 -->
+      <div class="sec-label" style="margin-top:4px;border-top:2px solid var(--border);padding-top:10px;">⚠ 收款單未核對到網銀</div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th>#</th><th>收款單編號</th><th>收款日期</th>
+            <th class="right">金額</th><th>類型</th>
+            <th>轉號後五碼</th><th>地址</th><th>備註</th>
+          </tr></thead>
+          <tbody id="biz-tb-unmatched"></tbody>
+        </table>
+      </div>
+
+      <!-- 網銀未比對 -->
+      <div class="sec-label" style="margin-top:4px;border-top:2px solid var(--border);padding-top:10px;">📥 網銀存入但無對應收款單</div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th>#</th><th>網銀日期</th><th class="right">存入金額</th>
+            <th>備註</th><th>虛擬帳號末五碼</th>
+          </tr></thead>
+          <tbody id="biz-tb-bankonly"></tbody>
+        </table>
+      </div>
+
+      <div class="actbar">
+        <div class="bal" id="biz-bal">—</div>
+        <div class="btns">
+          <button class="btn secondary" id="biz-btn-reset">重新上傳</button>
+          <button class="btn primary" id="biz-btn-voucher" disabled>下載傳票匯入檔</button>
+          <button class="btn primary" id="biz-btn-cashflow" disabled>下載金流表</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div><!-- /panel-biz -->
+
+<footer style="margin-top:32px;padding-top:14px;border-top:1px solid var(--border);font-size:12px;color:var(--ink-faint);display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;">
+  <span>房源版本：2026-06-17，共 282 筆</span>
+  <span>帳戶：房管處－國泰 #14432 · 業務處－國泰 #57668</span>
+</footer>
+</div><!-- /app -->
+
+<script>
+/* ══════════════════════════════════════
+   內建資料
+══════════════════════════════════════ */
+const HOUSING_DATA = [{"code": "AH1150603", "name": "新北大298", "aliases": []}, {"code": "AH1150602", "name": "和城262", "aliases": []}, {"code": "AH1150601", "name": "羅斯福269", "aliases": []}, {"code": "AH1150506", "name": "保健67", "aliases": []}, {"code": "AH1150505", "name": "南京250", "aliases": []}, {"code": "AH1150504", "name": "汀洲39", "aliases": []}, {"code": "AH1150503", "name": "信義127", "aliases": []}, {"code": "AH1150502", "name": "青年168-6", "aliases": []}, {"code": "AH1150501", "name": "青年168-5", "aliases": []}, {"code": "AH1150407", "name": "思源512", "aliases": []}, {"code": "AH1150406", "name": "寶興70(2F短租)", "aliases": []}, {"code": "AH1150405", "name": "信義235", "aliases": []}, {"code": "AH1150404", "name": "同安72", "aliases": []}, {"code": "AH1150403", "name": "民族219", "aliases": []}, {"code": "AH1150402", "name": "松勤9", "aliases": []}, {"code": "AH1150401", "name": "興南93", "aliases": []}, {"code": "AH1150305", "name": "中正223", "aliases": []}, {"code": "AH1150304", "name": "中和390", "aliases": []}, {"code": "AH1150303", "name": "八德182", "aliases": []}, {"code": "AH1150302", "name": "南京東368", "aliases": []}, {"code": "AH1150301", "name": "雙連23", "aliases": []}, {"code": "AH1150209", "name": "龍門191", "aliases": []}, {"code": "AH1150208", "name": "明水路539", "aliases": []}, {"code": "AH1150207", "name": "臨沂3", "aliases": []}, {"code": "AH1150206", "name": "民權東58-5", "aliases": []}, {"code": "AH1150205", "name": "福美街128", "aliases": []}, {"code": "AH1150204", "name": "興隆123", "aliases": []}, {"code": "AH1150203", "name": "忠孝東524", "aliases": []}, {"code": "AH1150202", "name": "承德292", "aliases": []}, {"code": "AH1150201", "name": "仁愛33", "aliases": []}, {"code": "AH1150102", "name": "承德116", "aliases": []}, {"code": "AH1150101", "name": "和平東55", "aliases": []}, {"code": "AH1141208", "name": "大安國宅1156", "aliases": []}, {"code": "AH1141207", "name": "環河241", "aliases": ["環河南241"]}, {"code": "AH1141206", "name": "合江144", "aliases": []}, {"code": "AH1141205", "name": "成都106", "aliases": []}, {"code": "AH1141204", "name": "錦州50-23", "aliases": []}, {"code": "AH1141203", "name": "中興37", "aliases": []}, {"code": "AH1141202", "name": "南港130", "aliases": []}, {"code": "AH1141201", "name": "光復南294", "aliases": []}, {"code": "AH1141103", "name": "環河西245", "aliases": []}, {"code": "AH1141102", "name": "羅斯福284", "aliases": []}, {"code": "AH1141101", "name": "天祥80", "aliases": []}, {"code": "AH1141003", "name": "明德333居所", "aliases": ["明德333"]}, {"code": "AH1141002", "name": "崇實63居所", "aliases": ["崇實63"]}, {"code": "AH1141001", "name": "羅斯福2", "aliases": []}, {"code": "AH1140904", "name": "新生北61", "aliases": []}, {"code": "AH1140903", "name": "宜安2", "aliases": []}, {"code": "AH1140902", "name": "大安居所", "aliases": []}, {"code": "AH1140804", "name": "南京東291", "aliases": []}, {"code": "AH1140803", "name": "雙城13", "aliases": []}, {"code": "AH1140802", "name": "艋舺120-5", "aliases": []}, {"code": "AH1140801", "name": "復興南132", "aliases": []}, {"code": "AH1140704", "name": "松江431", "aliases": []}, {"code": "AH1140703", "name": "通化88", "aliases": []}, {"code": "AH1140702", "name": "四平107", "aliases": []}, {"code": "AH1140701", "name": "健康178", "aliases": []}, {"code": "AH11406413", "name": "博愛25", "aliases": []}, {"code": "AH11406412", "name": "板橋香社56", "aliases": []}, {"code": "AH11406410", "name": "寶清5", "aliases": []}, {"code": "AH11406409", "name": "中山北96", "aliases": []}, {"code": "AH11406408", "name": "實踐93", "aliases": []}, {"code": "AH11406407", "name": "新店中華48", "aliases": []}, {"code": "AH11406406", "name": "承德69", "aliases": []}, {"code": "AH11406405", "name": "杭州南93", "aliases": []}, {"code": "AH11406404", "name": "成功193", "aliases": []}, {"code": "AH11406403", "name": "松山119", "aliases": []}, {"code": "AH11406402", "name": "華陰95", "aliases": []}, {"code": "AH11406401", "name": "南京東75", "aliases": []}, {"code": "AH11406400", "name": "康定232", "aliases": []}, {"code": "AH11406399", "name": "永和166", "aliases": []}, {"code": "AH11406398", "name": "集美197", "aliases": []}, {"code": "AH11406397", "name": "泰順40", "aliases": []}, {"code": "AH11406396", "name": "重陽125", "aliases": []}, {"code": "AH11406395", "name": "秀明112", "aliases": []}, {"code": "AH11406394", "name": "南京東108", "aliases": []}, {"code": "AH11406393", "name": "竹林39", "aliases": []}, {"code": "AH11406392", "name": "內湖91", "aliases": []}, {"code": "AH11406391", "name": "康樂48", "aliases": []}, {"code": "AH11406390", "name": "三重雙園1", "aliases": []}, {"code": "AH11406389", "name": "東湖119", "aliases": []}, {"code": "AH11406388", "name": "新府86", "aliases": []}, {"code": "AH11406387", "name": "艋舺120", "aliases": []}, {"code": "AH11406386", "name": "寶安37", "aliases": []}, {"code": "AH11406385", "name": "民權東103", "aliases": []}, {"code": "AH11406384", "name": "十四張381", "aliases": []}, {"code": "AH11406383", "name": "錦州30", "aliases": []}, {"code": "AH11406382", "name": "安居99", "aliases": []}, {"code": "AH11406381", "name": "秀明103", "aliases": []}, {"code": "AH11406380", "name": "板橋民生323", "aliases": []}, {"code": "AH11406379", "name": "忠孝東272", "aliases": []}, {"code": "AH11406378", "name": "成都155", "aliases": []}, {"code": "AH11406377", "name": "育英45", "aliases": []}, {"code": "AH11406376", "name": "忠孝東783", "aliases": []}, {"code": "AH11406375", "name": "蘆洲長安249", "aliases": []}, {"code": "AH11406374", "name": "文德22", "aliases": []}, {"code": "AH11406373", "name": "南京東45", "aliases": []}, {"code": "AH11406372", "name": "板橋合安25", "aliases": []}, {"code": "AH11406371", "name": "五分92", "aliases": []}, {"code": "AH11406370", "name": "北投知行228", "aliases": []}, {"code": "AH11406369", "name": "桂林6", "aliases": []}, {"code": "AH11406368", "name": "華固月河20 (A6-20)", "aliases": ["華固月河20"]}, {"code": "AH11406367", "name": "南京東53", "aliases": []}, {"code": "AH11406366", "name": "民生東56", "aliases": []}, {"code": "AH11406365", "name": "承德40", "aliases": []}, {"code": "AH11406364", "name": "汐止水源", "aliases": []}, {"code": "AH11406363", "name": "永貞437", "aliases": []}, {"code": "AH11406362", "name": "同安97", "aliases": []}, {"code": "AH11406361", "name": "和平西382", "aliases": []}, {"code": "AH11406360", "name": "民權東58", "aliases": []}, {"code": "AH11406359", "name": "泰順60", "aliases": []}, {"code": "AH11406358", "name": "文化90", "aliases": []}, {"code": "AH11406357", "name": "八德106", "aliases": []}, {"code": "AH11406356", "name": "建中48", "aliases": []}, {"code": "AH11406355", "name": "成都81", "aliases": []}, {"code": "AH11406354", "name": "信義317", "aliases": []}, {"code": "AH11406353", "name": "華江35", "aliases": []}, {"code": "AH11406352", "name": "東湖16", "aliases": []}, {"code": "AH11406351", "name": "安德52", "aliases": []}, {"code": "AH11406350", "name": "寶興70", "aliases": []}, {"code": "AH11406349", "name": "內湖737-5", "aliases": []}, {"code": "AH11406348", "name": "內湖737-4", "aliases": []}, {"code": "AH11406347", "name": "北新122", "aliases": []}, {"code": "AH11406346", "name": "樂業108", "aliases": []}, {"code": "AH11406345", "name": "辛亥222", "aliases": []}, {"code": "AH11406344", "name": "內湖323", "aliases": []}, {"code": "AH11406343", "name": "和平東363", "aliases": []}, {"code": "AH11406342", "name": "國光112", "aliases": []}, {"code": "AH11406341", "name": "民生東29", "aliases": []}, {"code": "AH11406340", "name": "萬盛68", "aliases": []}, {"code": "AH11406339", "name": "塔城44", "aliases": []}, {"code": "AH11406338", "name": "港墘57", "aliases": []}, {"code": "AH11406337", "name": "連城65", "aliases": []}, {"code": "AH11406336", "name": "重慶北47", "aliases": []}, {"code": "AH11406335", "name": "保慶6", "aliases": []}, {"code": "AH11406334", "name": "長安西45", "aliases": []}, {"code": "AH11406333", "name": "延吉68", "aliases": []}, {"code": "AH11406332", "name": "民生東80", "aliases": []}, {"code": "AH11406331", "name": "介壽106", "aliases": []}, {"code": "AH11406330", "name": "五常53", "aliases": []}, {"code": "AH11406329", "name": "北安595", "aliases": []}, {"code": "AH11406328", "name": "大安169", "aliases": []}, {"code": "AH11406327", "name": "吉林142", "aliases": []}, {"code": "AH11406326", "name": "信義147", "aliases": []}, {"code": "AH11406325", "name": "忠孝東206", "aliases": []}, {"code": "AH11406324", "name": "和平東95", "aliases": []}, {"code": "AH11406323", "name": "泰順50", "aliases": []}, {"code": "AH11406322", "name": "浦城6", "aliases": []}, {"code": "AH11406321", "name": "大安52", "aliases": []}, {"code": "AH11406320", "name": "和平東175", "aliases": []}, {"code": "AH11406319", "name": "和平東50", "aliases": []}, {"code": "AH11406318", "name": "基隆97", "aliases": []}, {"code": "AH11406317", "name": "羅斯福10", "aliases": []}, {"code": "AH11406316", "name": "景興195", "aliases": []}, {"code": "AH11406315", "name": "羅斯福202(901)", "aliases": []}, {"code": "AH11406314", "name": "中山北72", "aliases": []}, {"code": "AH11406313", "name": "五原19", "aliases": []}, {"code": "AH11406312", "name": "民生東147", "aliases": []}, {"code": "AH11406311", "name": "中山北137", "aliases": []}, {"code": "AH11406310", "name": "重慶北22", "aliases": []}, {"code": "AH11406309", "name": "中山北83", "aliases": []}, {"code": "AH11406308", "name": "晉江48", "aliases": []}, {"code": "AH11406307", "name": "汀州27", "aliases": []}, {"code": "AH11406305", "name": "晉江18", "aliases": []}, {"code": "AH11406304", "name": "同安93", "aliases": []}, {"code": "AH11406303", "name": "晉江19", "aliases": []}, {"code": "AH11406302", "name": "金門11", "aliases": []}, {"code": "AH11406301", "name": "羅斯福68", "aliases": []}, {"code": "AH11406300", "name": "汀州188", "aliases": []}, {"code": "AH11406299", "name": "萬大277", "aliases": []}, {"code": "AH11406298", "name": "興德76", "aliases": []}, {"code": "AH11406295", "name": "英士28", "aliases": []}, {"code": "AH11406294", "name": "景美147", "aliases": []}, {"code": "AH11406293", "name": "羅斯福176", "aliases": []}, {"code": "AH11406292", "name": "保平207", "aliases": []}, {"code": "AH11406291", "name": "文化366", "aliases": []}, {"code": "AH11406290", "name": "通化168", "aliases": []}, {"code": "AH11406289", "name": "景興153", "aliases": []}, {"code": "AH11406288", "name": "公館26", "aliases": []}, {"code": "AH11406287", "name": "長沙61", "aliases": []}, {"code": "AH11406286", "name": "和平東10", "aliases": []}, {"code": "AH11406285", "name": "臥龍4", "aliases": []}, {"code": "AH11406284", "name": "連勝38", "aliases": []}, {"code": "AH11406283", "name": "信義松山465", "aliases": []}, {"code": "AH11406282", "name": "和平東1", "aliases": []}, {"code": "AH11406281", "name": "松山204", "aliases": []}, {"code": "AH11406280", "name": "民生西232", "aliases": []}, {"code": "AH11406279", "name": "淡水中正12", "aliases": []}, {"code": "AH11406278", "name": "南京東303", "aliases": []}, {"code": "AH11406277", "name": "中坡北40", "aliases": []}, {"code": "AH11406276", "name": "信義53", "aliases": []}, {"code": "AH11406275", "name": "港墘37", "aliases": []}, {"code": "AH11406274", "name": "敦化南177", "aliases": []}, {"code": "AH11406273", "name": "中山北85", "aliases": []}, {"code": "AH1140502", "name": "瑞安23居所", "aliases": ["瑞安23"]}, {"code": "AH1140501", "name": "板橋文昌24居所", "aliases": []}, {"code": "AH1140401", "name": "三中145居所", "aliases": []}, {"code": "AH1140202", "name": "民生東112居所", "aliases": []}, {"code": "AH1140201", "name": "長春11居所", "aliases": []}, {"code": "AH1131203", "name": "中原33居所", "aliases": []}, {"code": "AH1131202", "name": "新巨蛋居所", "aliases": []}, {"code": "AH1131201", "name": "EAT9-5居所", "aliases": []}, {"code": "AH1131001", "name": "翡冷翠居所", "aliases": []}, {"code": "AH1130903", "name": "安居60居所", "aliases": []}, {"code": "AH1130902", "name": "忠孝783居所", "aliases": []}, {"code": "AH1130901", "name": "中和中2號居所", "aliases": []}, {"code": "AH1130805", "name": "中和復興居所", "aliases": []}, {"code": "AH1130804", "name": "中和勝利居所", "aliases": []}, {"code": "AH1130803", "name": "敦化100居所", "aliases": []}, {"code": "AH1130802", "name": "常殷至善園居所", "aliases": []}, {"code": "AH1130801", "name": "大安51居所", "aliases": []}, {"code": "AH1130602", "name": "雙園居所", "aliases": []}, {"code": "AH1130601", "name": "吉林142居所", "aliases": []}, {"code": "AH1130503", "name": "潤泰央北居所", "aliases": []}, {"code": "AH1130502", "name": "重慶居所", "aliases": []}, {"code": "AH1130473", "name": "雙十居所", "aliases": []}, {"code": "AH1130472", "name": "翡冷翠居所(舊)", "aliases": []}, {"code": "AH1130471", "name": "瑞安居所", "aliases": []}, {"code": "AH1130470", "name": "新生南居所", "aliases": []}, {"code": "AH1130468", "name": "象山居所", "aliases": []}, {"code": "AH1130467", "name": "通安居所", "aliases": []}, {"code": "AH1130466", "name": "美麗行館2號居所", "aliases": []}, {"code": "AH1130465", "name": "美麗行館1號居所(中山北53)", "aliases": []}, {"code": "AH1130464", "name": "昆明1010居所", "aliases": []}, {"code": "AH1130463", "name": "昆明0413居所", "aliases": []}, {"code": "AH1130462", "name": "延吉居所", "aliases": []}, {"code": "AH1130460", "name": "江翠居所", "aliases": []}, {"code": "AH1130459", "name": "四維居所", "aliases": []}, {"code": "AH1130458", "name": "中原居所", "aliases": []}, {"code": "AH1130457", "name": "大安居所(信義186)", "aliases": []}, {"code": "AH1130456", "name": "大安19居所", "aliases": []}, {"code": "AH1130455", "name": "八德居所", "aliases": []}, {"code": "AH1130452", "name": "品城西居所", "aliases": []}, {"code": "AH1130451", "name": "昆明0902居所", "aliases": []}, {"code": "AH1130450", "name": "敦煌居所", "aliases": []}, {"code": "AH1130449", "name": "偶戲館(八德106)居所", "aliases": []}, {"code": "AH1130448", "name": "芝山居所", "aliases": []}, {"code": "AH1130447", "name": "Imore居所", "aliases": []}, {"code": "AH1130446", "name": "長安東居所", "aliases": []}, {"code": "AH1130445", "name": "松機居所", "aliases": []}, {"code": "AH1130444", "name": "紅寶石居所", "aliases": []}, {"code": "AH1130443", "name": "北中居所", "aliases": []}, {"code": "AH1130442", "name": "民生東137居所", "aliases": []}, {"code": "AH1130441", "name": "南京三民居所", "aliases": []}, {"code": "AH1130440", "name": "大橋頭居所", "aliases": []}, {"code": "AH1130439", "name": "小北居所", "aliases": []}, {"code": "AH1130437", "name": "昆明1207居所", "aliases": []}, {"code": "AH1130436", "name": "西門1號居所", "aliases": []}, {"code": "AH1130435", "name": "新巨蛋居所(舊)", "aliases": []}, {"code": "AH1130434", "name": "實踐居所", "aliases": []}, {"code": "AH1130433", "name": "光灧居所", "aliases": []}, {"code": "AH1130432", "name": "戀戀居所", "aliases": []}, {"code": "AH1130431", "name": "大安192居所", "aliases": []}, {"code": "AH1130430", "name": "幸福居所", "aliases": []}, {"code": "AH1130429", "name": "文聖居所", "aliases": []}, {"code": "AH1130428", "name": "南勢角居所", "aliases": []}, {"code": "AH1130427", "name": "景華20居所", "aliases": []}, {"code": "AH1130426", "name": "敦化2號居所", "aliases": []}, {"code": "AH1130425", "name": "學士居所", "aliases": []}, {"code": "AH1130424", "name": "萬芳居所", "aliases": []}, {"code": "AH1130422", "name": "璞真仰睦居所", "aliases": []}, {"code": "AH1130421", "name": "樂華居所", "aliases": []}, {"code": "AH1130420", "name": "永愛居所", "aliases": []}, {"code": "AH1130419", "name": "永和樂居所", "aliases": []}, {"code": "AH1130418", "name": "中和中居所", "aliases": []}, {"code": "AH1130417", "name": "忠孝251居所", "aliases": []}, {"code": "AH1130416", "name": "圓山居所", "aliases": []}, {"code": "AH1130415", "name": "通化180居所", "aliases": []}, {"code": "AH1130414", "name": "古亭居所", "aliases": []}, {"code": "AH1130413", "name": "西門2號居所", "aliases": []}, {"code": "AH1130412", "name": "中正879居所", "aliases": []}, {"code": "AH1130411", "name": "通化39居所", "aliases": []}, {"code": "AH1130410", "name": "敦化1號居所", "aliases": []}, {"code": "AH1130409", "name": "何必館居所", "aliases": []}, {"code": "AH1130408", "name": "尚林苑居所", "aliases": []}, {"code": "AH1130407", "name": "景興居所", "aliases": []}, {"code": "AH1130406", "name": "成福居所", "aliases": []}, {"code": "AH1130405", "name": "中正614居所", "aliases": []}, {"code": "AH1130404", "name": "永吉278居所", "aliases": []}, {"code": "AH1130403", "name": "保安居所", "aliases": []}, {"code": "AH1130402", "name": "小室哲哉居所", "aliases": []}, {"code": "AH1130401", "name": "弘道居所", "aliases": []}];
+// HOUSING_SORTED 已在下方 matchHousing 區塊定義
+
+function pad2(n){return String(n).padStart(2,'0');}
+
+const VOUCHER_HEADERS = ["年度","傳票號碼","傳票種類","日期","外幣代號","匯率","轉B帳註記","唯一流水號(主檔 )","序號","科目代號","客戶供應商代號","摘要","借/貸","金額","部門編號","專案編號 ","工程項目序號","收據","分攤|調整註記","列印註記","原傳票號碼","外幣金額","長摘要","主檔自定義欄位一","主檔自定義欄位二","主檔自定義欄位三","主檔自定義欄位四","主檔自定義欄位五","主檔自定義欄位六","主檔自定義欄位七","主檔自定義欄位八","主檔自定義欄位九","主檔自定義欄位十","主檔自定義欄位十一","主檔自定義欄位十二","明細自定義欄位一","明細自定義欄位二","明細自定義欄位三","明細自定義欄位四","明細自定義欄位五","明細自定義欄位六","明細自定義欄位七","明細自定義欄位八","明細自定義欄位九","明細自定義欄位十","明細自定義欄位十一","明細自定義欄位十二","來源別","來源單號"];
+
+const ACCOUNTS = {
+  fang: {
+    label:"房管處－國泰 #14432",
+    cashflowHeader:"國泰世華/世貿分行 #14432 - 銀存明細　　房管處",
+    lines:[
+      {code:"1110-01", dc:1, amountType:"full"},
+      {code:"2205-02", dc:2, amountType:"full"},
+    ],
+    buildSummary(ctx){
+      const base = ctx.remainder?(ctx.matchedName+"-"+ctx.remainder):ctx.matchedName;
+      return base+"-"+ctx.rocYear+pad2(ctx.rocMonth)+"租金-"+ctx.tenant;
+    },
+  },
+  biz_service:{
+    label:"業務處－國泰 #57668（服務費）",
+    cashflowHeader:"國泰世華/仁愛分行 #57668 - 銀存明細  業務處",
+    lines:[
+      {code:"1110-02", dc:1, amountType:"full"},
+      {code:"4101-03", dc:2, amountType:"untaxed"},
+      {code:"2290",    dc:2, amountType:"tax"},
+    ],
+    buildSummary(ctx){return ctx.address+"-"+ctx.tenantOrOwner+"-服務費";},
+  },
+  biz_deposit:{
+    label:"業務處－國泰 #57668（定金）",
+    cashflowHeader:"國泰世華/仁愛分行 #57668 - 銀存明細  業務處",
+    // TODO: 待補科目
+    lines:[],
+    buildSummary(ctx){return ctx.address+"-定金（待補規則）";},
+  },
+  biz_earnest:{
+    label:"業務處－國泰 #57668（斡旋金）",
+    cashflowHeader:"國泰世華/仁愛分行 #57668 - 銀存明細  業務處",
+    // TODO: 待補科目
+    lines:[],
+    buildSummary(ctx){return ctx.address+"-斡旋金（待補規則）";},
+  },
+};
+
+/* ══════════════════════════════════════
+   工具函式
+══════════════════════════════════════ */
+function toRoc(raw){
+  let y,m,d;
+  if(raw instanceof Date){y=raw.getFullYear();m=raw.getMonth()+1;d=raw.getDate();}
+  else if(typeof raw==="number"&&raw>19000000){
+    // YYYYMMDD integer
+    y=Math.floor(raw/10000); m=Math.floor((raw%10000)/100); d=raw%100;
+  } else if(typeof raw==="number"){
+    const p=XLSX.SSF.parse_date_code(raw); y=p.y; m=p.m; d=p.d;
+  } else {
+    const s=String(raw).replace(/\//g,'-');
+    const parts=s.split('-').map(Number);
+    y=parts[0]; m=parts[1]; d=parts[2];
+  }
+  return{year:y-1911,month:m,day:d,str:(y-1911)+"/"+pad2(m)+"/"+pad2(d),
+    dateKey:y*10000+m*100+d};
+}
+
+function bankLast5(row){
+  // 網銀虛擬帳號欄位(index 10)
+  const v=row[10];
+  if(!v||String(v)==="0"||String(v)==="0000000000000000")return null;
+  return String(v).slice(-5);
+}
+
+function thirdLast5(payAcct){
+  // 繳費帳號格式 "(013) - 45323367308592"
+  if(!payAcct)return null;
+  const clean=String(payAcct).replace(/\s/g,'').replace(/^\(013\)-/,'');
+  return clean.slice(-5);
+}
+
+function ragicLast5(code){
+  if(!code||String(code).trim()===''||String(code).trim()==='nan')return null;
+  // 處理 Excel 讀出來是浮點數的情況，例如 14021.0 → "14021"
+  const s=String(code).trim().replace(/\.0+$/,'');
+  if(!s||s==='nan')return null;
+  return s.padStart(5,'0').slice(-5);
+}
+
+// 建立比對清單：把每筆房源的主名稱和別名都展開成獨立比對項目，按長度降序
+const HOUSING_MATCH_LIST = [];
+HOUSING_DATA.forEach(h=>{
+  HOUSING_MATCH_LIST.push({code:h.code, matchKey:h.name});
+  (h.aliases||[]).forEach(alias=>{
+    HOUSING_MATCH_LIST.push({code:h.code, matchKey:alias});
+  });
+});
+HOUSING_MATCH_LIST.sort((a,b)=>b.matchKey.length-a.matchKey.length);
+
+const HOUSING_SORTED = HOUSING_MATCH_LIST; // 保留相容性
+
+function matchHousing(name){
+  const n=String(name);
+  for(const h of HOUSING_MATCH_LIST){
+    if(n.startsWith(h.matchKey))
+      return{code:h.code, matchedName:h.matchKey, remainder:n.slice(h.matchKey.length)};
+  }
+  return null;
+}
+
+function computeAmt(type,gross){
+  if(type==="full")return gross;
+  if(type==="untaxed")return Math.round(gross/1.05);
+  if(type==="tax")return gross-Math.round(gross/1.05);
+  return 0;
+}
+
+function fmtMoney(n){return Number(n).toLocaleString("zh-TW");}
+
+function rocStr(raw){try{return toRoc(raw).str;}catch{return String(raw);}}
+
+/* ══════════════════════════════════════
+   解析網銀
+══════════════════════════════════════ */
+function parseBankXlsx(data){
+  const wb=XLSX.read(data,{type:"array"});
+  const ws=wb.Sheets[wb.SheetNames[0]];
+  const aoa=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null});
+  const hi=aoa.findIndex(r=>r.some(c=>c==="帳務日期"));
+  if(hi===-1)throw new Error("找不到「帳務日期」欄位，請確認是網銀匯出格式");
+  return aoa.slice(hi+1)
+    .filter(r=>r[0]!=null && r[2]!=null && Number(r[2])>0)
+    .map(r=>({
+      raw:r,
+      dateKey:toRoc(r[0]).dateKey,
+      amount:Number(r[2]),
+      note:r[6]?String(r[6]).trim():"",
+      last5:bankLast5(r),
+      partnerLast5:r[8]?String(r[8]).slice(-5):null,
+    }));
+}
+
+/* ══════════════════════════════════════
+   解析第三方帳務報表
+══════════════════════════════════════ */
+function parseThirdXlsx(data){
+  const wb=XLSX.read(data,{type:"array"});
+  const sheetName=wb.SheetNames.includes("全部資料")?"全部資料":wb.SheetNames[wb.SheetNames.length-1];
+  const ws=wb.Sheets[sheetName];
+  const aoa=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null});
+  const hi=aoa.findIndex(r=>r.some(c=>c==="編號"));
+  if(hi===-1)throw new Error("找不到「編號」欄位，請確認是帳務管理報表格式");
+  const headers=aoa[hi];
+  const col=n=>headers.indexOf(n);
+  return aoa.slice(hi+1)
+    .filter(r=>{
+      const name=r[col("物件名稱")];
+      const dateVal=r[col("入帳日期")];
+      const amtVal=r[col("入帳金額")];
+      const statusVal=r[col("付款狀態")];
+      // 排除空列
+      if(!name && !dateVal && !amtVal) return false;
+      // 排除第二個 header 列（物件名稱欄是「物件名稱」字串）
+      if(String(name)==="物件名稱" || String(statusVal)==="付款狀態") return false;
+      // 排除無效入帳日期或金額
+      if(!dateVal || amtVal==null) return false;
+      const amt=Number(amtVal);
+      if(isNaN(amt)||amt<=0) return false;
+      // 只取已付款
+      if(statusVal && !String(statusVal).includes("已付款")) return false;
+      return true;
+    })
+    .map(r=>{
+      const objName=String(r[col("物件名稱")]);
+      const payAcct=r[col("繳費帳號")];
+      const match=matchHousing(objName);
+      const roc=toRoc(r[col("入帳日期")]);
+      const otherDesc=r[col("其他費用說明")]?String(r[col("其他費用說明")]):"";
+      const billNote=r[col("帳單備註")]?String(r[col("帳單備註")]):"";
+      const totalAmt=Number(r[col("入帳金額")]);
+
+      // 租金費用加總（六項）
+      const feeSum=(Number(r[col("租金")])||0)
+        +(Number(r[col("水費")])||0)
+        +(Number(r[col("電費")])||0)
+        +(Number(r[col("管理費")])||0)
+        +(Number(r[col("網路費")])||0)
+        +(Number(r[col("瓦斯費")])||0);
+
+      // 其他費用差額
+      const otherAmt=Math.max(totalAmt-feeSum, 0);
+
+      // 其他費用說明含「押金」→ 押金；否則 → 系統管理費
+      const otherIsDeposit=otherDesc.includes("押金")||billNote.includes("押金");
+
+      return{
+        objName, tenant:r[col("承租人姓名")]||"",
+        dateKey:roc.dateKey, rocStr:roc.str, rocYear:roc.year, rocMonth:roc.month,
+        amount:totalAmt,
+        feeSum,       // 租金+水電等加總
+        otherAmt,     // 差額（押金 or 管理費）
+        otherDesc, billNote,
+        otherIsDeposit,
+        isDepositByDesc:otherIsDeposit, // 保留相容性
+        payAcct, last5:thirdLast5(payAcct),
+        match,
+      };
+    });
+}
+
+/* ══════════════════════════════════════
+   解析 RAGIC 收款單
+══════════════════════════════════════ */
+function parseRagicXlsx(data){
+  const wb=XLSX.read(data,{type:"array"});
+  const ws=wb.Sheets[wb.SheetNames[0]];
+  const aoa=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null});
+  const hi=aoa.findIndex(r=>r.some(c=>c==="收款單編號"));
+  if(hi===-1)throw new Error("找不到「收款單編號」欄位，請確認是 RAGIC 收款單格式");
+  const headers=aoa[hi];
+  const col=n=>headers.indexOf(n);
+  return aoa.slice(hi+1)
+    .filter(r=>r[col("收款單編號")]!=null)
+    .map(r=>{
+      const roc=toRoc(r[col("收款日期")]);
+      const typeRaw=r[col("收款類型")]||"";
+      let acctKey="biz_service";
+      if(typeRaw.includes("定金"))acctKey="biz_deposit";
+      else if(typeRaw.includes("斡旋金"))acctKey="biz_earnest";
+      const last5raw=r[col("轉號後五碼")];
+      return{
+        id:r[col("收款單編號")],
+        dateKey:roc.dateKey, rocStr:roc.str,
+        amount:Number(r[col("收款金額")]),
+        typeRaw, acctKey,
+        last5:ragicLast5(last5raw),
+        address:r[col("地址")]||"",
+        reporter:r[col("回報人員")]||"",
+        dept:r[col("回報部門")]||"",
+        account:r[col("收款帳戶")]||"",
+        tenantOrOwner:"",// 業務處需手選
+      };
+    });
+}
+
+/* ══════════════════════════════════════
+   核心比對邏輯
+══════════════════════════════════════ */
+function dateDiffDays(dk1, dk2){
+  // dateKey 格式 YYYYMMDD
+  function toDate(dk){
+    const y=Math.floor(dk/10000), m=Math.floor((dk%10000)/100), d=dk%100;
+    return new Date(y,m-1,d);
+  }
+  return Math.round(Math.abs(toDate(dk1)-toDate(dk2))/(1000*60*60*24));
+}
+
+function last5match(sLast5, b){
+  if(!sLast5) return true;               // source 無末五碼 → 不限制
+  if(b.last5 && sLast5===b.last5) return true;
+  if(b.partnerLast5 && sLast5===b.partnerLast5) return true;
+  return false;
+}
+
+function nameInNote(houseName, note){
+  // 取房源名稱前4字（去掉「居所」）比對網銀備註
+  const key = houseName.replace(/居所.*$/,'').slice(0,4);
+  return key.length>0 && note && note.includes(key);
+}
+
+function findSubsetSum(candidates, target){
+  // 找candidates子集（2筆以上）加總等於target
+  // 筆數不多（通常<20）所以暴力搜尋
+  for(let r=2; r<=Math.min(candidates.length,5); r++){
+    const combo = [];
+    function pick(start, remaining){
+      if(combo.length===r){
+        return remaining===0 ? [...combo] : null;
+      }
+      for(let i=start; i<candidates.length; i++){
+        if(candidates[i].amount<=remaining){
+          combo.push(candidates[i]);
+          const res = pick(i+1, remaining-candidates[i].amount);
+          if(res) return res;
+          combo.pop();
+        }
+      }
+      return null;
+    }
+    const res = pick(0, target);
+    if(res) return res;
+  }
+  return null;
+}
+
+function reconcile(sourceList, bankList){
+  const bankUsed = new Set();
+  const matched = [];
+  const unmatched = [];
+
+  for(const s of sourceList){
+    // ── 一對一比對（日期±1天 ＋ 金額 ＋ 末五碼）──
+    let found = null;
+    for(let i=0; i<bankList.length; i++){
+      if(bankUsed.has(i)) continue;
+      const b = bankList[i];
+      if(dateDiffDays(s.dateKey, b.dateKey)<=1
+        && b.amount===s.amount
+        && last5match(s.last5, b)){
+        found = i; break;
+      }
+    }
+    if(found!==null){
+      bankUsed.add(found);
+      matched.push({source:s, bank:[bankList[found]], mode:'1:1'});
+      continue;
+    }
+
+    // ── 一對多比對（拆單）：日期±1天 ＋ 末五碼或房源名稱 ＋ 加總等於金額 ──
+    const candidates = bankList
+      .map((b,i)=>({...b,_i:i}))
+      .filter(b => !bankUsed.has(b._i)
+        && dateDiffDays(s.dateKey, b.dateKey)<=1
+        && (last5match(s.last5, b) || nameInNote(s.houseName||s.objName||'', b.note||'')));
+
+    const combo = findSubsetSum(candidates, s.amount);
+    if(combo){
+      combo.forEach(b=>bankUsed.add(b._i));
+      matched.push({source:s, bank:combo.map(b=>bankList[b._i]), mode:'1:N'});
+      continue;
+    }
+
+    unmatched.push(s);
+  }
+
+  const bankOnly = bankList.filter((_,i)=>!bankUsed.has(i));
+  return{matched, unmatched, bankOnly};
+}
+
+/* ══════════════════════════════════════
+   解析房管處收款單（116欄完整版）
+══════════════════════════════════════ */
+function parseFangReceiptXlsx(data){
+  const wb=XLSX.read(data,{type:"array"});
+  const ws=wb.Sheets[wb.SheetNames[0]];
+  const aoa=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null});
+  const hi=aoa.findIndex(r=>r.some(c=>c==="收款單編號"));
+  if(hi===-1)throw new Error("找不到「收款單編號」欄位，請確認是房管處收款單格式");
+  const headers=aoa[hi];
+  const col=n=>headers.indexOf(n);
+  return aoa.slice(hi+1)
+    .filter(r=>r[col("收款單編號")]!=null)
+    .map(r=>{
+      const roc=toRoc(r[col("收款日期")]);
+      const detail=r[col("款項細節說明")]?String(r[col("款項細節說明")]):"";
+      const typeRaw=r[col("收款類型")]?String(r[col("收款類型")]):"";
+      // 從款項細節說明的「第一期租金實際匯款內容」段落解析金額
+      let parsedRent=null, parsedDeposit=null, parsedMgmtFee=null, parsedAgentFee=null;
+      const detailPart=detail.includes("第一期租金實際匯款內容")
+        ?detail.slice(detail.indexOf("第一期租金實際匯款內容"))
+        :detail;
+      const mRent=detailPart.match(/租金[:：]?\s*\$?(\d[\d,]*)/);
+      const mDep=detailPart.match(/押金[:：]?\s*\$?(\d[\d,]*)/);
+      const mMgmt=detailPart.match(/(?:管理服務費|系統管理服務費|系統管理費|系統服務費|系統費|管理費)[:：]?\s*\$?(\d[\d,]*)/);
+      const mAgent=detailPart.match(/仲介服務費[:：]?\s*\$?(\d[\d,]*)/);
+      if(mRent)parsedRent=parseInt(mRent[1].replace(/,/g,""));
+      if(mDep)parsedDeposit=parseInt(mDep[1].replace(/,/g,""));
+      if(mMgmt)parsedMgmtFee=parseInt(mMgmt[1].replace(/,/g,""));
+      if(mAgent)parsedAgentFee=parseInt(mAgent[1].replace(/,/g,""));
+      const last5raw=r[col("轉號後五碼")];
+      const houseName=r[col("房源名稱")]?String(r[col("房源名稱")]):"";
+      const houseMatch=matchHousing(houseName);
+      return{
+        id:String(r[col("收款單編號")]),
+        dateKey:roc.dateKey, rocStr:roc.str, rocYear:roc.year, rocMonth:roc.month,
+        amount:Number(r[col("收款金額")]),
+        typeRaw,
+        last5:ragicLast5(last5raw),
+        houseName, houseMatch,
+        roomName:r[col("房間名稱")]?String(r[col("房間名稱")]):"",
+        tenantName:r[col("姓名")]?String(r[col("姓名")]):"",
+        deposit:r[col("押金")]?Number(r[col("押金")]):parsedDeposit,
+        mgmtFee:parsedMgmtFee,
+        agentFee:parsedAgentFee,
+        parsedRent,
+        detail,
+      };
+    });
+}
+
+/* ══════════════════════════════════════
+   房管處收款單傳票邏輯
+══════════════════════════════════════ */
+function buildFangReceiptLines(rec){
+  // rec: 房管處收款單一筆
+  const code=rec.houseMatch?rec.houseMatch.code:(rec.houseName||"");
+  const name=rec.houseMatch?rec.houseMatch.matchedName:rec.houseName;
+  const roc=rec.rocYear+pad2(rec.rocMonth);
+  const tenant=rec.tenantName||"";
+  const gross=rec.amount;
+  const lines=[];
+
+  if(rec.typeRaw.includes("租金+押金")){
+    const dep=rec.deposit||0;
+    const mgmt=rec.mgmtFee||0;
+    const agent=rec.agentFee||0;
+    // 租金：優先從款項細節說明抓，驗證後採用
+    const rentFromDetail=rec.parsedRent||null;
+    const rentCalc=gross-dep-mgmt-agent; // 計算方式作為備用
+    const rent=(rentFromDetail && Math.abs(rentFromDetail+mgmt+agent+dep-gross)<=1)
+      ? rentFromDetail
+      : rentCalc;
+
+    // 借方：一列，全部總款
+    lines.push({code:"1110-01",custCode:code,dc:1,amount:gross,
+      summary:`${name}-押金+${roc}租金+系統管理費-${tenant}`});
+    // 貸方
+    if(mgmt>0){
+      lines.push({code:"4101-024",custCode:code,dc:2,amount:mgmt,
+        summary:`${name}-系統管理費-${tenant}`});
+    }
+    lines.push({code:"2205-02",custCode:code,dc:2,amount:rent,
+      summary:`${name}-${roc}租金-${tenant}`});
+    if(agent>0){
+      lines.push({code:"2205-01",custCode:code,dc:2,amount:agent,
+        summary:`${name}-仲介服務費-${tenant}`});
+    }
+    lines.push({code:"2205-03",custCode:code,dc:2,amount:dep,
+      summary:`${name}-押金-${tenant}`});
+
+  }else if(rec.typeRaw.includes("代管費")){
+    lines.push({code:"1110-01",custCode:code,dc:1,amount:gross,
+      summary:`${name}-${roc}代管費`});
+    lines.push({code:"2205-01",custCode:code,dc:2,amount:gross,
+      summary:`${name}-${roc}代管費`});
+
+  }else if(rec.typeRaw.includes("租金")){
+    // 純租金（沿用原邏輯）
+    lines.push({code:"1110-01",custCode:code,dc:1,amount:gross,
+      summary:`${name}-${roc}租金-${tenant}`});
+    lines.push({code:"2205-02",custCode:code,dc:2,amount:gross,
+      summary:`${name}-${roc}租金-${tenant}`});
+
+  }else if(rec.typeRaw.includes("定金")){
+    // 定金：待補，框架先建立
+    lines.push({code:"1110-01",custCode:code,dc:1,amount:gross,
+      summary:`${name}-定金-${tenant}（待確認科目）`});
+    lines.push({code:"PENDING",custCode:code,dc:2,amount:gross,
+      summary:`${name}-定金-${tenant}（待確認科目）`});
+  }
+  return lines;
+}
+
+/* ══════════════════════════════════════
+   狀態
+══════════════════════════════════════ */
+let fangState={bank:null,third:null,receipt:null,cashflowFile:null,
+  matched:[],unmatched:[],
+  bankonlyMatched:[],bankonlyUnmatched:[]};
+let bizState={bank:null,ragic:null,matched:[],unmatched:[],bankOnly:[]};
+
+/* ══════════════════════════════════════
+   Tab 切換
+══════════════════════════════════════ */
+document.querySelectorAll(".tab").forEach(tab=>{
+  tab.addEventListener("click",()=>{
+    document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+    document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
+    tab.classList.add("active");
+    document.getElementById("panel-"+tab.dataset.tab).classList.add("active");
+  });
+});
+
+/* ══════════════════════════════════════
+   通用 dropzone 繫結
+══════════════════════════════════════ */
+function bindDropzone(dzId, fileInputId, onFile){
+  const dz=document.getElementById(dzId);
+  const fi=document.getElementById(fileInputId);
+  dz.addEventListener("click",()=>fi.click());
+  dz.addEventListener("dragover",e=>{e.preventDefault();dz.classList.add("dragover");});
+  dz.addEventListener("dragleave",()=>dz.classList.remove("dragover"));
+  dz.addEventListener("drop",e=>{
+    e.preventDefault();dz.classList.remove("dragover");
+    if(e.dataTransfer.files.length)onFile(e.dataTransfer.files[0],dz);
+  });
+  fi.addEventListener("change",e=>{if(e.target.files.length)onFile(e.target.files[0],dz);});
+}
+
+function readFile(file){
+  return new Promise((res,rej)=>{
+    const r=new FileReader();
+    r.onload=e=>res(e.target.result);
+    r.onerror=rej;
+    r.readAsArrayBuffer(file);
+  });
+}
+
+function showErr(id,msg){
+  const el=document.getElementById(id);
+  el.textContent=msg; el.style.display="block";
+}
+function clearErr(id){document.getElementById(id).style.display="none";}
+
+/* ══════════════════════════════════════
+   解析正本金流表
+══════════════════════════════════════ */
+function parseCashflowXlsx(data){
+  const wb=XLSX.read(data,{type:"array"});
+  const ws=wb.Sheets[wb.SheetNames[0]];
+  const aoa=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null});
+  // 找資料列：說明欄不為空、收入欄是數字
+  const rows=[];
+  let currentDate="";
+  for(const r of aoa){
+    // 日期欄（第0欄）有值就更新當前日期
+    if(r[0] && String(r[0]).match(/\d+月\d+日/)){
+      currentDate=String(r[0]).replace(/\s*★\s*/g,"").trim();
+    }
+    const desc=r[1]?String(r[1]).trim():"";
+    const income=r[3]?Number(r[3]):null;
+    if(!desc||!income||isNaN(income)||income<=0) continue;
+    // 跳過標題列
+    if(desc==="說明"||desc==="null") continue;
+    rows.push({date:currentDate, desc, amount:income,
+      isUnmatched:desc.startsWith("【未核對")});
+  }
+  return rows;
+}
+
+/* ══════════════════════════════════════
+   從金流表摘要判斷會計科目
+══════════════════════════════════════ */
+function buildVoucherFromCashflowDesc(desc, amount, rocStr, rocYear){
+  // 從摘要抓房源名稱（第一個 - 之前）
+  const parts=desc.split("-");
+  const houseName=parts[0]?parts[0].trim():"";
+  const houseMatch=matchHousing(houseName)||{code:houseName,matchedName:houseName};
+  const code=houseMatch.code;
+  const lines=[];
+
+  // 判斷類型
+  const hasRent=desc.includes("租金");
+  const hasDeposit=desc.includes("押金");
+  const hasMgmt=desc.includes("代管費");
+  const hasService=desc.includes("服務費")||desc.includes("定金");
+  const hasMgmtFee=desc.includes("系統管理費");
+
+  if(hasDeposit && hasRent){
+    // 租金+押金混合：需要從收款單拆分，這裡用全額先借，貸方待補
+    // 嘗試從 fangState 收款單找對應
+    const receipt=fangState.receipt?fangState.receipt.find(r=>
+      matchHousing(r.houseName)&&matchHousing(r.houseName).code===code
+      &&r.typeRaw.includes("租金+押金")):null;
+    if(receipt){
+      const lines2=buildFangReceiptLines(receipt);
+      return lines2.map(l=>({...l,acctCode:l.code,rocStr,rocYear}));
+    }
+    // 找不到收款單，整筆借入，貸方標記待補
+    lines.push({acctCode:"1110-01",custCode:code,dc:1,amount,summary:desc,rocStr,rocYear});
+    lines.push({acctCode:"2205-02",custCode:code,dc:2,amount,summary:desc+"（待確認拆分）",rocStr,rocYear});
+  } else if(hasDeposit){
+    lines.push({acctCode:"1110-01",custCode:code,dc:1,amount,summary:desc,rocStr,rocYear});
+    lines.push({acctCode:"2205-03",custCode:code,dc:2,amount,summary:desc,rocStr,rocYear});
+  } else if(hasRent){
+    lines.push({acctCode:"1110-01",custCode:code,dc:1,amount,summary:desc,rocStr,rocYear});
+    if(hasMgmtFee){
+      // 有系統管理費，從描述抓金額（如有），否則整筆租金
+      lines.push({acctCode:"2205-02",custCode:code,dc:2,amount,summary:desc,rocStr,rocYear});
+    } else {
+      lines.push({acctCode:"2205-02",custCode:code,dc:2,amount,summary:desc,rocStr,rocYear});
+    }
+  } else if(hasMgmt){
+    lines.push({acctCode:"1110-01",custCode:code,dc:1,amount,summary:desc,rocStr,rocYear});
+    lines.push({acctCode:"2205-01",custCode:code,dc:2,amount,summary:desc,rocStr,rocYear});
+  } else if(hasService){
+    lines.push({acctCode:"1110-02",custCode:code,dc:1,amount,summary:desc,rocStr,rocYear});
+    lines.push({acctCode:"4101-03",custCode:code,dc:2,amount:Math.round(amount/1.05),summary:desc,rocStr,rocYear});
+    lines.push({acctCode:"2290",custCode:code,dc:2,amount:amount-Math.round(amount/1.05),summary:desc,rocStr,rocYear});
+  } else {
+    // 無法判斷，整筆借入標記待確認
+    lines.push({acctCode:"1110-01",custCode:code,dc:1,amount,summary:desc,rocStr,rocYear});
+    lines.push({acctCode:"PENDING",custCode:code,dc:2,amount,summary:desc+"（科目待確認）",rocStr,rocYear});
+  }
+  return lines;
+}
+
+/* ══════════════════════════════════════
+   正本金流表上傳綁定
+══════════════════════════════════════ */
+bindDropzone("fang-dz-cashflow","fang-file-cashflow",async(file,dz)=>{
+  try{
+    const data=await readFile(file);
+    fangState.cashflowFile=parseCashflowXlsx(data);
+    dz.classList.add("loaded");
+    dz.querySelector(".dz-label").textContent="✓ "+file.name;
+    const unmatchedCount=fangState.cashflowFile.filter(r=>r.isUnmatched).length;
+    const total=fangState.cashflowFile.length;
+    const statusEl=document.getElementById("fang-cashflow-status");
+    if(unmatchedCount>0){
+      statusEl.innerHTML=`<span style="color:var(--warn);">⚠ 金流表共 ${total} 筆，其中 ${unmatchedCount} 筆仍標記【未核對】，建議出納確認後再下載傳票</span>`;
+    } else {
+      statusEl.innerHTML=`<span style="color:var(--ok);font-weight:700;">✓ 金流表共 ${total} 筆，全部有摘要，可下載傳票匯入檔</span>`;
+    }
+    updateFangVoucherBtn();
+  }catch(e){showErr("fang-err","正本金流表讀取失敗："+e.message);}
+});
+
+function updateFangVoucherBtn(){
+  const hasFile=fangState.cashflowFile&&fangState.cashflowFile.length>0;
+  document.getElementById("fang-btn-voucher").disabled=!hasFile;
+}
+bindDropzone("fang-dz-bank","fang-file-bank",async(file,dz)=>{
+  try{
+    const data=await readFile(file);
+    fangState.bank=parseBankXlsx(data);
+    dz.classList.add("loaded");
+    dz.querySelector(".dz-label").textContent="✓ "+file.name;
+  }catch(e){showErr("fang-err",e.message);}
+  updateFangMatchBtn();
+});
+
+bindDropzone("fang-dz-third","fang-file-third",async(file,dz)=>{
+  try{
+    const data=await readFile(file);
+    fangState.third=parseThirdXlsx(data);
+    dz.classList.add("loaded");
+    dz.querySelector(".dz-label").textContent="✓ "+file.name;
+  }catch(e){showErr("fang-err",e.message);}
+  updateFangMatchBtn();
+});
+
+bindDropzone("fang-dz-receipt","fang-file-receipt",async(file,dz)=>{
+  try{
+    const data=await readFile(file);
+    fangState.receipt=parseFangReceiptXlsx(data);
+    dz.classList.add("loaded");
+    dz.querySelector(".dz-label").textContent="✓ "+file.name;
+  }catch(e){showErr("fang-err",e.message);}
+  // 收款單是選填，不影響比對按鈕
+});
+
+function updateFangMatchBtn(){
+  document.getElementById("fang-btn-match").disabled=!(fangState.bank&&fangState.third);
+}
+
+document.getElementById("fang-btn-match").addEventListener("click",()=>{
+  clearErr("fang-err");
+  const res=reconcile(fangState.third, fangState.bank);
+  fangState.matched=res.matched;
+  fangState.unmatched=res.unmatched;
+
+  fangState.bankonlyMatched=[];
+  fangState.bankonlyUnmatched=[];
+  if(fangState.receipt && fangState.receipt.length>0){
+    const res2=reconcile(fangState.receipt, res.bankOnly);
+    fangState.bankonlyMatched=res2.matched;
+    fangState.bankonlyUnmatched=res2.bankOnly;
+  }else{
+    fangState.bankonlyUnmatched=res.bankOnly;
+  }
+  renderFangResult();
+});
+
+document.getElementById("fang-btn-reset").addEventListener("click",()=>{
+  fangState={bank:null,third:null,receipt:null,cashflowFile:null,
+    matched:[],unmatched:[],bankonlyMatched:[],bankonlyUnmatched:[]};
+  document.getElementById("fang-upload").hidden=false;
+  document.getElementById("fang-result").hidden=true;
+  ["fang-dz-bank","fang-dz-third","fang-dz-receipt","fang-dz-cashflow"].forEach(id=>{
+    const dz=document.getElementById(id);
+    dz.classList.remove("loaded");
+    if(id.includes("bank"))dz.querySelector(".dz-label").textContent="上傳網銀明細";
+    else if(id.includes("third"))dz.querySelector(".dz-label").textContent="上傳帳務管理報表";
+    else if(id.includes("receipt"))dz.querySelector(".dz-label").textContent="上傳房管處收款單";
+    else dz.querySelector(".dz-label").textContent="上傳正本金流表";
+  });
+  ["fang-file-bank","fang-file-third","fang-file-receipt","fang-file-cashflow"].forEach(id=>{
+    document.getElementById(id).value="";
+  });
+  document.getElementById("fang-btn-match").disabled=true;
+  document.getElementById("fang-btn-voucher").disabled=true;
+  document.getElementById("fang-cashflow-status").textContent="尚未上傳正本金流表，上傳後可產出傳票匯入檔";
+});
+
+/* ══════════════════════════════════════
+   房管處 渲染
+══════════════════════════════════════ */
+function renderFangResult(){
+  document.getElementById("fang-upload").hidden=true;
+  document.getElementById("fang-result").hidden=false;
+
+  const{matched,bankonlyMatched,bankonlyUnmatched}=fangState;
+  const unmatchedStat=fangState.unmatched||[];
+  document.getElementById("fang-cnt-matched").textContent=matched.length;
+  document.getElementById("fang-cnt-unmatched").textContent=unmatchedStat.length;
+  document.getElementById("fang-cnt-bankonly").textContent=
+    (bankonlyMatched||[]).length+(bankonlyUnmatched||[]).length;
+
+  // ── 比對成功（帳務報表 vs 網銀）──
+  const tbM=document.getElementById("fang-tb-matched");
+  tbM.innerHTML="";
+  matched.forEach((item,i)=>{
+    const s=item.source; const m=s.match;
+    const isDepo=isDepositItem(item);
+    const tr=document.createElement("tr");
+    tr.className="matched";
+    tr.innerHTML=`
+      <td>${i+1}</td><td>${s.objName}</td><td>${s.tenant}</td>
+      <td class="mono">${s.rocStr}</td>
+      <td class="mono right">${fmtMoney(s.amount)}</td>
+      <td class="mono">${s.last5||"—"}</td>
+      <td>${isDepo?'<span class="tag blue">押金</span>':'<span class="tag ok">租金</span>'}</td>
+      <td class="mono">${m?m.code:'<span class="tag warn">未比對到房源</span>'}</td>
+    `;
+    tbM.appendChild(tr);
+  });
+  if(!matched.length) tbM.innerHTML=`<tr><td colspan="8" style="color:var(--ink-faint);text-align:center;padding:16px;">無比對成功筆數</td></tr>`;
+
+  // ── 未核對（帳務報表找不到網銀）──
+  const tbU=document.getElementById("fang-tb-unmatched");
+  tbU.innerHTML="";
+  const unmatchedList=fangState.unmatched||[];
+  unmatchedList.forEach((s,i)=>{
+    const tr=document.createElement("tr");
+    tr.className="unmatched";
+    const payAcctDisplay=s.payAcct?String(s.payAcct).replace(/\s+/g," ").trim():"—";
+    tr.innerHTML=`
+      <td>${i+1}</td>
+      <td>${s.objName||"—"}</td>
+      <td>${s.tenant||"—"}</td>
+      <td class="mono">${s.rocStr||"—"}</td>
+      <td class="mono right">${fmtMoney(s.amount)}</td>
+      <td class="mono" style="white-space:normal;min-width:180px;">${payAcctDisplay}</td>
+      <td><span class="tag warn">待出納核查</span></td>
+    `;
+    tbU.appendChild(tr);
+  });
+  if(!unmatchedList.length){
+    tbU.innerHTML=`<tr><td colspan="7" style="color:var(--ink-faint);text-align:center;padding:16px;">無未核對筆數</td></tr>`;
+  }
+
+  // ── 網銀→收款單 第二輪比對成功 ──
+  const subMatchedEl=document.getElementById("fang-bankonly-sub-matched");
+  const tbBM=document.getElementById("fang-tb-bankonly-matched");
+  tbBM.innerHTML="";
+  if(bankonlyMatched&&bankonlyMatched.length>0){
+    subMatchedEl.hidden=false;
+    bankonlyMatched.forEach((item,i)=>{
+      const s=item.source;
+      const banks=Array.isArray(item.bank)?item.bank:[item.bank]; // 1:1 或 1:N
+      const typeShort=s.typeRaw.replace("房管處|","");
+      const tagCls=s.typeRaw.includes("押金")?"blue":s.typeRaw.includes("代管")?"grey":"ok";
+      const modeTag=item.mode==='1:N'?`<span class="tag warn">拆單${banks.length}筆</span>`:"";
+      // 網銀日期／金額：1:N 時顯示多筆
+      const bankDates=banks.map(b=>rocStr(b.raw[0])).join("、");
+      const bankAmts=banks.map(b=>fmtMoney(b.amount)).join("＋");
+      const bankNotes=banks.map(b=>b.note||"—").join("、");
+      const bankLast5s=[...new Set(banks.map(b=>b.last5||b.partnerLast5||"—"))].join("、");
+      const tr=document.createElement("tr");
+      tr.className="matched";
+      tr.innerHTML=`
+        <td>${i+1}</td>
+        <td class="mono">${bankDates}</td>
+        <td class="mono right">${bankAmts}${item.mode==='1:N'?`<br><small style="color:var(--ink-soft)">合計 ${fmtMoney(s.amount)}</small>`:""}</td>
+        <td>${bankNotes}</td>
+        <td class="mono">${bankLast5s}</td>
+        <td class="mono">${s.id}</td>
+        <td><span class="tag ${tagCls}">${typeShort}</span>${modeTag}</td>
+        <td>${s.houseName}</td>
+        <td>${s.tenantName||"—"}</td>
+      `;
+      tbBM.appendChild(tr);
+    });
+  }else{ subMatchedEl.hidden=true; }
+
+  // ── 網銀仍找不到的 ──
+  const tbB=document.getElementById("fang-tb-bankonly");
+  tbB.innerHTML="";
+  (bankonlyUnmatched||[]).forEach((b,i)=>{
+    const tr=document.createElement("tr");
+    tr.className="bank-only";
+    tr.innerHTML=`
+      <td>${i+1}</td>
+      <td class="mono">${rocStr(b.raw[0])}</td>
+      <td class="mono right">${fmtMoney(b.amount)}</td>
+      <td>${b.note||"—"}</td>
+      <td class="mono">${b.last5||"—"}</td>
+      <td class="mono">${b.partnerLast5||"—"}</td>
+      <td><span class="tag warn">待查</span></td>
+    `;
+    tbB.appendChild(tr);
+  });
+  if(!(bankonlyUnmatched&&bankonlyUnmatched.length)){
+    tbB.innerHTML=`<tr><td colspan="7" style="color:var(--ink-faint);text-align:center;padding:16px;">${fangState.receipt?"無剩餘未核對網銀筆數":"（上傳收款單可進行第二輪比對）"}</td></tr>`;
+  }
+
+  // ── 借貸平衡 ──
+  let debit=0,credit=0;
+  matched.forEach(item=>{
+    if(!item.source.match) return; // 沒有房源代號的跳過
+    buildThirdPartyLines(item).forEach(line=>{
+      if(line.dc===1)debit+=line.amount; else credit+=line.amount;
+    });
+  });
+  (bankonlyMatched||[]).forEach(item=>{
+    buildFangReceiptLines(item.source).forEach(line=>{
+      if(line.dc===1)debit+=line.amount; else credit+=line.amount;
+    });
+  });
+  const hasPending=(bankonlyMatched||[]).some(item=>item.source.typeRaw.includes("定金"));
+  const balEl=document.getElementById("fang-bal");
+  if(hasPending){
+    balEl.innerHTML=`<span class="warn">⚠ 含定金筆數（科目待確認），暫不計算平衡</span>`;
+  }else{
+    balEl.innerHTML=`借方 ${fmtMoney(debit)}　貸方 ${fmtMoney(credit)}　`+
+      (debit===credit?`<span class="ok">✓ 平衡</span>`:`<span class="warn">⚠ 不平衡，請檢查</span>`);
+  }
+
+  // ── 比對完成率 ──
+  const totalBank=fangState.bank.length;
+  const matchedBank=matched.length+(bankonlyMatched||[]).length;
+  // 一對多的情況，網銀筆數以 banks 陣列長度計算
+  let matchedBankCount=0;
+  matched.forEach(item=>{
+    const banks=Array.isArray(item.bank)?item.bank:[item.bank];
+    matchedBankCount+=banks.length;
+  });
+  (bankonlyMatched||[]).forEach(item=>{
+    const banks=Array.isArray(item.bank)?item.bank:[item.bank];
+    matchedBankCount+=banks.length;
+  });
+  const unmatchedBankCount=totalBank-matchedBankCount;
+  const rateEl=document.getElementById("fang-reconcile-status");
+
+  if(unmatchedBankCount===0 && totalBank>0){
+    rateEl.innerHTML=`<span style="color:var(--ok);font-weight:700;">✓ 全部 ${totalBank} 筆網銀已核對完成，可下載傳票匯入檔</span>`;
+  }else if(totalBank>0){
+    rateEl.innerHTML=`<span style="color:var(--warn);">⚠ 還有 <strong>${unmatchedBankCount}</strong> 筆未核對（共 ${totalBank} 筆）— 金流表可先下載，傳票請補齊後再下載</span>`;
+  }
+
+  // 傳票：需要上傳正本金流表才能下載
+  updateFangVoucherBtn();
+  // 金流表：比對完成後就可以下載
+  document.getElementById("fang-btn-cashflow").disabled=false;
+}
+
+/* ══════════════════════════════════════
+   房管處 產出檔案
+══════════════════════════════════════ */
+
+// 判斷這筆是否為押金（帳務報表其他費用說明 or 網銀備註含「押金」）
+function isDepositItem(item){
+  if(item.source.isDepositByDesc) return true;
+  const banks=Array.isArray(item.bank)?item.bank:[item.bank];
+  return banks.some(b=>b.note&&b.note.includes("押金"));
+}
+
+// 帳務報表那批的傳票分錄
+function buildThirdPartyLines(item){
+  const s=item.source; const m=s.match;
+  if(!m) return [];
+  const name=m.matchedName;
+  const code=m.code;
+  const roc=s.rocYear+pad2(s.rocMonth);
+  const tenant=s.tenant;
+  const lines=[];
+
+  // ── 借方：整筆入帳金額 → 1110-01 ──
+  lines.push({acctCode:"1110-01",custCode:code,dc:1,amount:s.amount,
+    summary:`${name}-${roc}租金-${tenant}`});
+
+  // ── 貸方拆分 ──
+  // 1. 租金費用加總部分 → 2205-02
+  if(s.feeSum>0){
+    lines.push({acctCode:"2205-02",custCode:code,dc:2,amount:s.feeSum,
+      summary:`${name}-${roc}租金-${tenant}`});
+  }
+
+  // 2. 其他費用差額部分
+  if(s.otherAmt>0){
+    if(s.otherIsDeposit){
+      // 含「押金」→ 2205-03
+      lines.push({acctCode:"2205-03",custCode:code,dc:2,amount:s.otherAmt,
+        summary:`${name}-押金-${tenant}`});
+    }else{
+      // 系統管理費等 → 4101-024
+      lines.push({acctCode:"4101-024",custCode:code,dc:2,amount:s.otherAmt,
+        summary:`${name}-系統管理費-${tenant}`});
+    }
+  }
+
+  return lines;
+}
+
+document.getElementById("fang-btn-voucher").addEventListener("click",()=>{
+  if(!fangState.cashflowFile||!fangState.cashflowFile.length){
+    alert("請先上傳正本金流表"); return;
+  }
+  const rows=[VOUCHER_HEADERS];
+
+  // 合併同日期同摘要的多筆（分筆匯入合併）
+  const merged=[];
+  fangState.cashflowFile.forEach(row=>{
+    if(row.isUnmatched) return; // 未核對的跳過
+    // 找前一筆同日期同房源
+    const houseName=row.desc.split("-")[0].trim();
+    const prev=merged[merged.length-1];
+    if(prev && prev.houseName===houseName && prev.date===row.date &&
+       !row.desc.includes("★")){
+      // 合併金額
+      prev.amount+=row.amount;
+    } else {
+      merged.push({...row, houseName});
+    }
+  });
+
+  // 產出傳票
+  merged.forEach(row=>{
+    // 計算民國年
+    const rocYear=row.date?parseInt(row.date):fangState.matched[0]?.source.rocYear||115;
+    const rocStr=row.date||"";
+    const lines=buildVoucherFromCashflowDesc(row.desc, row.amount, rocStr, rocYear);
+    lines.forEach(line=>{
+      const r=new Array(VOUCHER_HEADERS.length).fill(null);
+      r[0]=rocYear; r[1]="DEFAULT"; r[2]=3; r[3]=rocStr;
+      r[9]=line.acctCode; r[10]=line.custCode;
+      r[12]=line.dc; r[13]=line.amount;
+      r[22]=line.summary;
+      rows.push(r);
+    });
+  });
+
+  const ws=XLSX.utils.aoa_to_sheet(rows);
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,"傳票累積檔");
+  XLSX.writeFile(wb,"傳票匯入_房管處_"+new Date().toISOString().slice(0,10)+".xlsx");
+});
+
+document.getElementById("fang-btn-cashflow").addEventListener("click",()=>{
+  const acct=ACCOUNTS.fang;
+  const wb=XLSX.utils.book_new();
+
+  // ── 建立「網銀筆 → 比對結果」的查找表 ──
+  // key：用 raw[0](日期)+amount 組合，value：摘要說明
+  // 用 Map 儲存，key = raw index（在 fangState.bank 陣列的位置）
+
+  // 先建立 bank 陣列的 index map
+  const bankIndexMap=new Map(); // bank物件 → 在 fangState.bank 中的 index
+  fangState.bank.forEach((b,i)=>bankIndexMap.set(b,i));
+
+  // 建立 bankIndex → 摘要說明 的 map
+  const bankSummaryMap=new Map();
+
+  // 第一輪：帳務報表比對成功
+  fangState.matched.forEach(item=>{
+    const s=item.source; const m=s.match;
+    if(!m) return;
+    const banks=Array.isArray(item.bank)?item.bank:[item.bank];
+    const summary=`${m.matchedName}-${s.rocYear+pad2(s.rocMonth)}租金-${s.tenant}`;
+    banks.forEach(b=>{
+      const idx=bankIndexMap.get(b);
+      if(idx!==undefined) bankSummaryMap.set(idx, summary);
+    });
+  });
+
+  // 第二輪：收款單比對成功
+  (fangState.bankonlyMatched||[]).forEach(item=>{
+    const s=item.source;
+    const banks=Array.isArray(item.bank)?item.bank:[item.bank];
+    const typeShort=s.typeRaw.replace("房管處|","");
+    const summary=`${s.houseName}-${typeShort}-${s.tenantName||""}`;
+    banks.forEach(b=>{
+      const idx=bankIndexMap.get(b);
+      if(idx!==undefined) bankSummaryMap.set(idx, summary);
+    });
+  });
+
+  // ── 按網銀原始順序輸出 ──
+  const roc0=fangState.bank.length?toRoc(fangState.bank[0].raw[0]):toRoc(new Date());
+  const aoa=[];
+  aoa.push([roc0.year+"年", acct.cashflowHeader, null, null, null, null, null]);
+  aoa.push(["日期", null, "說明", "收入", "支出", "匯費", "餘額"]);
+
+  let lastDate="";
+  fangState.bank.forEach((b,i)=>{
+    const roc=toRoc(b.raw[0]);
+    const dateStr=roc.month+"月"+roc.day+"日";
+    const dateCell=dateStr===lastDate?null:dateStr;
+
+    if(bankSummaryMap.has(i)){
+      // 已比對到
+      aoa.push([dateCell, bankSummaryMap.get(i), null, b.amount, null, null, null]);
+    }else{
+      // 未核對
+      const note=b.note||"—";
+      const last5info=[b.last5,b.partnerLast5].filter(Boolean).join("/");
+      const summary=`【未核對－待查】${note}${last5info?" 末五碼:"+last5info:""}`;
+      aoa.push([(dateCell?dateCell+" ★":null), summary, null, b.amount, null, null, null]);
+    }
+    lastDate=dateStr;
+  });
+
+  const ws=XLSX.utils.aoa_to_sheet(aoa);
+  ws["!cols"]=[{wch:12},{wch:42},{wch:12},{wch:12},{wch:10},{wch:8},{wch:12}];
+  XLSX.utils.book_append_sheet(wb,ws,acct.label.slice(0,31));
+  XLSX.writeFile(wb,"金流表_房管處_"+new Date().toISOString().slice(0,10)+".xlsx");
+});
+
+/* ══════════════════════════════════════
+   業務處 上傳
+══════════════════════════════════════ */
+bindDropzone("biz-dz-bank","biz-file-bank",async(file,dz)=>{
+  try{
+    const data=await readFile(file);
+    bizState.bank=parseBankXlsx(data);
+    dz.classList.add("loaded");
+    dz.querySelector(".dz-label").textContent="✓ "+file.name;
+  }catch(e){showErr("biz-err",e.message);}
+  updateBizMatchBtn();
+});
+
+bindDropzone("biz-dz-ragic","biz-file-ragic",async(file,dz)=>{
+  try{
+    const data=await readFile(file);
+    bizState.ragic=parseRagicXlsx(data);
+    dz.classList.add("loaded");
+    dz.querySelector(".dz-label").textContent="✓ "+file.name;
+  }catch(e){showErr("biz-err",e.message);}
+  updateBizMatchBtn();
+});
+
+function updateBizMatchBtn(){
+  document.getElementById("biz-btn-match").disabled=!(bizState.bank&&bizState.ragic);
+}
+
+document.getElementById("biz-btn-match").addEventListener("click",()=>{
+  clearErr("biz-err");
+  // 業務處只比對轉號有值的（現金收款不走網銀，排除掉）
+  const ragicForMatch=bizState.ragic.filter(r=>r.last5);
+  const res=reconcile(ragicForMatch, bizState.bank);
+  bizState.matched=res.matched;
+  bizState.unmatched=res.unmatched;
+  // 收款單沒有後五碼的（現金等）另外列
+  bizState.cashOnly=bizState.ragic.filter(r=>!r.last5);
+  bizState.bankOnly=res.bankOnly;
+  renderBizResult();
+});
+
+document.getElementById("biz-btn-reset").addEventListener("click",()=>{
+  bizState={bank:null,ragic:null,matched:[],unmatched:[],bankOnly:[]};
+  document.getElementById("biz-upload").hidden=false;
+  document.getElementById("biz-result").hidden=true;
+  ["biz-dz-bank","biz-dz-ragic"].forEach(id=>{
+    const dz=document.getElementById(id);
+    dz.classList.remove("loaded");
+    dz.querySelector(".dz-label").textContent=id.includes("bank")?"上傳網銀明細":"上傳 RAGIC 收款單";
+  });
+  document.getElementById("biz-file-bank").value="";
+  document.getElementById("biz-file-ragic").value="";
+  document.getElementById("biz-btn-match").disabled=true;
+});
+
+/* ══════════════════════════════════════
+   業務處 渲染
+══════════════════════════════════════ */
+function typeTag(acctKey){
+  if(acctKey==="biz_service")return`<span class="tag ok">服務費</span>`;
+  if(acctKey==="biz_deposit")return`<span class="tag blue">定金</span>`;
+  return`<span class="tag grey">斡旋金</span>`;
+}
+
+function renderBizResult(){
+  document.getElementById("biz-upload").hidden=true;
+  document.getElementById("biz-result").hidden=false;
+
+  const{matched,unmatched,bankOnly}=bizState;
+  document.getElementById("biz-cnt-matched").textContent=matched.length;
+  document.getElementById("biz-cnt-unmatched").textContent=unmatched.length+(bizState.cashOnly?.length||0);
+  document.getElementById("biz-cnt-bankonly").textContent=bankOnly.length;
+
+  // 比對成功
+  const tbM=document.getElementById("biz-tb-matched");
+  tbM.innerHTML="";
+  matched.forEach((item,i)=>{
+    const s=item.source;
+    const tr=document.createElement("tr");
+    tr.className="matched";
+
+    // 收款帳戶 select
+    const selAcct=document.createElement("select");
+    [["1110-02","業務處－國泰 #57668"]].forEach(([v,l])=>selAcct.add(new Option(l,v)));
+    selAcct.value="1110-02";
+
+    // 房客/屋主 select
+    const selTO=document.createElement("select");
+    selTO.className=s.tenantOrOwner?"":"empty";
+    ["","房客","屋主"].forEach(v=>selTO.add(new Option(v||"請選擇",v)));
+    selTO.value=s.tenantOrOwner;
+    selTO.addEventListener("change",()=>{s.tenantOrOwner=selTO.value;selTO.classList.toggle("empty",!selTO.value);updateBizButtons();});
+
+    td=(html)=>{const t=document.createElement("td");t.innerHTML=html;return t;};
+    tde=(el)=>{const t=document.createElement("td");t.appendChild(el);return t;};
+
+    tr.appendChild(td(String(i+1)));
+    tr.appendChild(td(s.id));
+    tr.appendChild(td(`<span class="mono">${s.rocStr}</span>`));
+    tr.appendChild(td(`<span class="mono right">${fmtMoney(s.amount)}</span>`));
+    tr.appendChild(td(typeTag(s.acctKey)));
+    tr.appendChild(td(`<span class="mono">${s.last5||"—"}</span>`));
+    tr.appendChild(td(s.address));
+    tr.appendChild(td(s.reporter));
+    tr.appendChild(tde(selAcct));
+    tr.appendChild(tde(selTO));
+    tbM.appendChild(tr);
+  });
+  if(!matched.length)tbM.innerHTML=`<tr><td colspan="10" style="color:var(--ink-faint);text-align:center;padding:16px;">無比對成功筆數</td></tr>`;
+
+  // 未核對（含現金）
+  const allUnmatched=[...unmatched,...(bizState.cashOnly||[])];
+  const tbU=document.getElementById("biz-tb-unmatched");
+  tbU.innerHTML="";
+  allUnmatched.forEach((s,i)=>{
+    const tr=document.createElement("tr");
+    tr.className="unmatched";
+    const note=s.last5?'<span class="tag warn">待查</span>':'<span class="tag grey">現金／無後五碼</span>';
+    tr.innerHTML=`
+      <td>${i+1}</td>
+      <td class="mono">${s.id}</td>
+      <td class="mono">${s.rocStr}</td>
+      <td class="mono right">${fmtMoney(s.amount)}</td>
+      <td>${typeTag(s.acctKey)}</td>
+      <td class="mono">${s.last5||"—"}</td>
+      <td>${s.address}</td>
+      <td>${note}</td>
+    `;
+    tbU.appendChild(tr);
+  });
+  if(!allUnmatched.length)tbU.innerHTML=`<tr><td colspan="8" style="color:var(--ink-faint);text-align:center;padding:16px;">無未核對筆數</td></tr>`;
+
+  // 網銀未比對
+  const tbB=document.getElementById("biz-tb-bankonly");
+  tbB.innerHTML="";
+  bankOnly.forEach((b,i)=>{
+    const tr=document.createElement("tr");
+    tr.className="bank-only";
+    tr.innerHTML=`
+      <td>${i+1}</td>
+      <td class="mono">${rocStr(b.raw[0])}</td>
+      <td class="mono right">${fmtMoney(b.amount)}</td>
+      <td>${b.note||"—"}</td>
+      <td class="mono">${b.last5||"—"}</td>
+    `;
+    tbB.appendChild(tr);
+  });
+  if(!bankOnly.length)tbB.innerHTML=`<tr><td colspan="5" style="color:var(--ink-faint);text-align:center;padding:16px;">無多餘網銀筆數</td></tr>`;
+
+  // 借貸平衡（只算服務費，其他待補）
+  let debit=0,credit=0;
+  matched.forEach(item=>{
+    const acct=ACCOUNTS[item.source.acctKey];
+    acct.lines.forEach(line=>{
+      const amt=computeAmt(line.amountType,item.source.amount);
+      if(line.dc===1)debit+=amt; else credit+=amt;
+    });
+  });
+  const balEl=document.getElementById("biz-bal");
+  const hasPending=matched.some(item=>ACCOUNTS[item.source.acctKey].lines.length===0);
+  if(hasPending){
+    balEl.innerHTML=`<span class="warn">⚠ 部分類型（定金／斡旋金）科目待補，暫不計算平衡</span>`;
+  }else{
+    balEl.innerHTML=`借方 ${fmtMoney(debit)}　貸方 ${fmtMoney(credit)}　`+
+      (debit===credit?`<span class="ok">✓ 平衡</span>`:`<span class="warn">⚠ 不平衡</span>`);
+  }
+
+  updateBizButtons();
+}
+
+function updateBizButtons(){
+  if(!bizState.matched)return;
+  // 服務費的都需要選房客/屋主才算完整
+  const serviceItems=bizState.matched.filter(item=>item.source.acctKey==="biz_service");
+  const allTOSet=serviceItems.every(item=>item.source.tenantOrOwner);
+  // 定金/斡旋金科目未補，先不能下載傳票
+  const hasPending=bizState.matched.some(item=>ACCOUNTS[item.source.acctKey].lines.length===0);
+  const ready=bizState.matched.length>0 && allTOSet && !hasPending;
+  document.getElementById("biz-btn-voucher").disabled=!ready;
+  document.getElementById("biz-btn-cashflow").disabled=bizState.matched.length===0||!allTOSet;
+}
+
+/* ══════════════════════════════════════
+   業務處 產出
+══════════════════════════════════════ */
+document.getElementById("biz-btn-voucher").addEventListener("click",()=>{
+  const rows=[VOUCHER_HEADERS];
+  bizState.matched.forEach(item=>{
+    const s=item.source;
+    const acct=ACCOUNTS[s.acctKey];
+    if(!acct.lines.length)return;
+    const summary=acct.buildSummary({address:s.address,tenantOrOwner:s.tenantOrOwner});
+    acct.lines.forEach(line=>{
+      const row=new Array(VOUCHER_HEADERS.length).fill(null);
+      row[0]=toRoc(s.dateKey).year; row[1]="DEFAULT"; row[2]=3;
+      row[3]=s.rocStr; row[9]=line.code;
+      row[12]=line.dc; row[13]=computeAmt(line.amountType,s.amount);
+      row[22]=summary;
+      rows.push(row);
+    });
+  });
+  const ws=XLSX.utils.aoa_to_sheet(rows);
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,"傳票累積檔");
+  XLSX.writeFile(wb,"傳票匯入_業務處_"+new Date().toISOString().slice(0,10)+".xlsx");
+});
+
+document.getElementById("biz-btn-cashflow").addEventListener("click",()=>{
+  // 按帳戶分組
+  const grouped={};
+  bizState.matched.forEach(item=>{
+    const k=item.source.acctKey;
+    (grouped[k]=grouped[k]||[]).push(item);
+  });
+  const wb=XLSX.utils.book_new();
+  Object.keys(grouped).forEach(key=>{
+    const acct=ACCOUNTS[key];
+    const txns=[...grouped[key]].sort((a,b)=>a.source.dateKey-b.source.dateKey);
+    const roc0=toRoc(txns[0].source.dateKey);
+    const aoa=[];
+    aoa.push([roc0.year+"年", acct.cashflowHeader,null,null,null,null,null]);
+    aoa.push(["日期",null,"單號","收入","支出","匯費","餘額"]);
+    let lastDate="";
+    txns.forEach(item=>{
+      const s=item.source;
+      const roc=toRoc(s.dateKey);
+      const dateStr=roc.month+"月"+roc.day+"日";
+      const summary=acct.buildSummary({address:s.address,tenantOrOwner:s.tenantOrOwner});
+      aoa.push([dateStr===lastDate?null:dateStr, summary, null, s.amount, null, null, null]);
+      lastDate=dateStr;
+    });
+    const ws=XLSX.utils.aoa_to_sheet(aoa);
+    ws["!cols"]=[{wch:10},{wch:36},{wch:12},{wch:12},{wch:10},{wch:8},{wch:12}];
+    XLSX.utils.book_append_sheet(wb,ws,acct.label.replace(/[\\/?*\[\]:]/g,"").slice(0,31));
+  });
+  XLSX.writeFile(wb,"金流表_業務處_"+new Date().toISOString().slice(0,10)+".xlsx");
+});
+
+// 輔助：讓 dateKey 能被 toRoc 吃（整數 YYYYMMDD）
+const _origToRoc=toRoc;
+</script>
+</div><!-- /app -->
+</div><!-- /app-page -->
+</body>
+</html>
