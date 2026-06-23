@@ -25,19 +25,11 @@
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
   const provider = new GoogleAuthProvider();
-  provider.setCustomParameters({ hd: ALLOWED_DOMAIN });
 
   // 監聽登入狀態
   onAuthStateChanged(auth, user => {
     if(user){
-      const domain = user.email.split("@")[1];
-      if(domain !== ALLOWED_DOMAIN){
-        // 非公司帳號，強制登出
-        signOut(auth);
-        showLoginPage("此工具僅限 @" + ALLOWED_DOMAIN + " 帳號使用");
-        return;
-      }
-      // 公司帳號，顯示工具
+      // 測試模式：暫時允許所有 Google 帳號，確認功能後再加網域限制
       document.getElementById("login-page").style.display = "none";
       document.getElementById("app-page").style.display = "block";
       document.getElementById("user-name").textContent = user.displayName || user.email;
@@ -1111,7 +1103,9 @@ bindDropzone("fang-dz-cashflow","fang-file-cashflow",async(file,dz)=>{
 
 function updateFangVoucherBtn(){
   const hasFile=fangState.cashflowFile&&fangState.cashflowFile.length>0;
-  document.getElementById("fang-btn-voucher").disabled=!hasFile;
+  const cfUnmatched=hasFile?fangState.cashflowFile.filter(r=>r.isUnmatched).length:0;
+  // 有金流表且沒有未核對筆才能下載
+  document.getElementById("fang-btn-voucher").disabled=!(hasFile&&cfUnmatched===0);
 }
 bindDropzone("fang-dz-bank","fang-file-bank",async(file,dz)=>{
   try{
@@ -1320,10 +1314,8 @@ function renderFangResult(){
       (debit===credit?`<span class="ok">✓ 平衡</span>`:`<span class="warn">⚠ 不平衡，請檢查</span>`);
   }
 
-  // ── 比對完成率 ──
+  // ── 比對完成率（以網銀比對結果顯示，供出納參考）──
   const totalBank=fangState.bank.length;
-  const matchedBank=matched.length+(bankonlyMatched||[]).length;
-  // 一對多的情況，網銀筆數以 banks 陣列長度計算
   let matchedBankCount=0;
   matched.forEach(item=>{
     const banks=Array.isArray(item.bank)?item.bank:[item.bank];
@@ -1336,13 +1328,25 @@ function renderFangResult(){
   const unmatchedBankCount=totalBank-matchedBankCount;
   const rateEl=document.getElementById("fang-reconcile-status");
 
-  if(unmatchedBankCount===0 && totalBank>0){
-    rateEl.innerHTML=`<span style="color:var(--ok);font-weight:700;">✓ 全部 ${totalBank} 筆網銀已核對完成，可下載傳票匯入檔</span>`;
-  }else if(totalBank>0){
-    rateEl.innerHTML=`<span style="color:var(--warn);">⚠ 還有 <strong>${unmatchedBankCount}</strong> 筆未核對（共 ${totalBank} 筆）— 金流表可先下載，傳票請補齊後再下載</span>`;
+  if(fangState.cashflowFile&&fangState.cashflowFile.length>0){
+    // 有上傳正本金流表：以金流表內容為準
+    const cfUnmatched=fangState.cashflowFile.filter(r=>r.isUnmatched).length;
+    const cfTotal=fangState.cashflowFile.length;
+    if(cfUnmatched===0){
+      rateEl.innerHTML=`<span style="color:var(--ok);font-weight:700;">✓ 正本金流表 ${cfTotal} 筆全部有摘要，可下載傳票匯入檔</span>`;
+    }else{
+      rateEl.innerHTML=`<span style="color:var(--warn);">⚠ 正本金流表還有 <strong>${cfUnmatched}</strong> 筆標記【未核對】，請出納補齊後再下載傳票</span>`;
+    }
+  }else{
+    // 尚未上傳正本金流表：顯示網銀比對結果
+    if(unmatchedBankCount===0&&totalBank>0){
+      rateEl.innerHTML=`<span style="color:var(--ok);font-weight:700;">✓ 全部 ${totalBank} 筆網銀已核對完成，請上傳正本金流表後下載傳票</span>`;
+    }else if(totalBank>0){
+      rateEl.innerHTML=`<span style="color:var(--warn);">⚠ 還有 <strong>${unmatchedBankCount}</strong> 筆未核對（共 ${totalBank} 筆）— 請先下載金流表，出納補齊後上傳正本金流表</span>`;
+    }
   }
 
-  // 傳票：需要上傳正本金流表才能下載
+  // 傳票：需要上傳正本金流表，且金流表裡沒有【未核對】筆才能下載
   updateFangVoucherBtn();
   // 金流表：比對完成後就可以下載
   document.getElementById("fang-btn-cashflow").disabled=false;
