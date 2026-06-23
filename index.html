@@ -1443,26 +1443,33 @@ document.getElementById("fang-btn-voucher").addEventListener("click",()=>{
   const rows=[VOUCHER_HEADERS];
 
   // ── 合併分兩筆的項目 ──
-  // 規則：說明含「總計」的那筆，代表是第二筆（補充筆），要跟前一筆同房源合併
+  // 規則：說明含「分X筆」或「總計」代表是多筆系列
+  // 合併方式：同房源、連續出現的筆合併成一筆
   const merged=[];
   fangState.cashflowFile.forEach(row=>{
     const houseName=row.desc.split("-")[0].trim();
-    const isSecondPart=row.desc.includes("總計");
+    const hasTotal=row.desc.includes("總計");
+    const hasSplit=row.desc.includes("分2筆")||row.desc.includes("分兩筆")||row.desc.includes("分3筆");
 
-    if(isSecondPart && merged.length>0){
-      // 找前面最近的同房源筆
-      for(let i=merged.length-1;i>=0;i--){
-        const prevHouse=merged[i].desc.split("-")[0].trim();
-        if(prevHouse===houseName){
-          // 合併金額，更新說明為這筆（含完整資訊）
-          merged[i].amount+=row.amount;
-          merged[i].desc=row.desc; // 用含「總計」的那筆說明，資訊更完整
-          merged[i].merged=true;
-          break;
-        }
+    // 找前面最近的同房源筆，且距離不超過3筆
+    let merged_into=-1;
+    for(let i=merged.length-1;i>=Math.max(0,merged.length-4);i--){
+      const prevHouse=merged[i].desc.split("-")[0].trim();
+      const prevHasTotal=merged[i].desc.includes("總計");
+      const prevHasSplit=merged[i].desc.includes("分2筆")||merged[i].desc.includes("分兩筆");
+      if(prevHouse===houseName && (hasTotal||hasSplit||prevHasTotal||prevHasSplit)){
+        merged_into=i; break;
       }
+    }
+
+    if(merged_into>=0){
+      // 合併：金額加總，說明用較完整的那筆（含總計或分筆說明的優先）
+      const prev=merged[merged_into];
+      prev.amount+=row.amount;
+      // 用說明資訊更豐富的那筆
+      if(hasTotal||hasSplit) prev.desc=row.desc;
     }else{
-      merged.push({...row, houseName, merged:false});
+      merged.push({...row, houseName});
     }
   });
 
