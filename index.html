@@ -593,10 +593,18 @@ HOUSING_MATCH_LIST.sort((a,b)=>b.matchKey.length-a.matchKey.length);
 const HOUSING_SORTED = HOUSING_MATCH_LIST; // 保留相容性
 
 function matchHousing(name){
-  const n=String(name);
+  const n=String(name).trim();
+  // 先精確比對（含別名）
   for(const h of HOUSING_MATCH_LIST){
     if(n.startsWith(h.matchKey))
       return{code:h.code, matchedName:h.matchKey, remainder:n.slice(h.matchKey.length)};
+  }
+  // 再嘗試「金流表沒有居所，資料庫有居所」的情況
+  // 例如金流表「安居60」→ 資料庫「安居60居所」
+  for(const h of HOUSING_MATCH_LIST){
+    const keyWithout=h.matchKey.replace(/居所.*$/,"").trim();
+    if(keyWithout.length>=3 && n.startsWith(keyWithout))
+      return{code:h.code, matchedName:keyWithout, remainder:n.slice(keyWithout.length)};
   }
   return null;
 }
@@ -1002,21 +1010,35 @@ function parseCashflowXlsx(data){
   const wb=XLSX.read(data,{type:"array"});
   const ws=wb.Sheets[wb.SheetNames[0]];
   const aoa=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null});
-  // 找資料列：說明欄不為空、收入欄是數字
+
   const rows=[];
   let currentDate="";
+
   for(const r of aoa){
-    // 日期欄（第0欄）有值就更新當前日期
-    if(r[0] && String(r[0]).match(/\d+月\d+日/)){
-      currentDate=String(r[0]).replace(/\s*★\s*/g,"").trim();
+    // 更新日期（第0欄有日期文字）
+    const dateCell=r[0]?String(r[0]).replace(/\s*★\s*/g,"").trim():"";
+    if(dateCell && /\d+月\d+日/.test(dateCell)){
+      currentDate=dateCell;
     }
-    const desc=r[1]?String(r[1]).trim():"";
+
+    // 說明欄（第1欄），清除換行符和多餘空白
+    const rawDesc=r[1]?String(r[1]):"";
+    const desc=rawDesc.replace(/[\r\n]+/g," ").replace(/\s+/g," ").trim();
+
+    // 收入欄（第3欄）
     const income=r[3]?Number(r[3]):null;
+
+    // 跳過：沒有說明、沒有收入、標題列、或是未核對的
     if(!desc||!income||isNaN(income)||income<=0) continue;
-    // 跳過標題列
-    if(desc==="說明"||desc==="null") continue;
-    rows.push({date:currentDate, desc, amount:income,
-      isUnmatched:desc.startsWith("【未核對")});
+    if(desc==="說明") continue;
+    if(desc.startsWith("【未核對")) continue;
+
+    rows.push({
+      date:currentDate,
+      desc,
+      amount:income,
+      isUnmatched:false,
+    });
   }
   return rows;
 }
@@ -1024,57 +1046,73 @@ function parseCashflowXlsx(data){
 /* ══════════════════════════════════════
    從金流表摘要判斷會計科目
 ══════════════════════════════════════ */
-function buildVoucherFromCashflowDesc(desc, amount, rocStr, rocYear){
-  // 從摘要抓房源名稱（第一個 - 之前）
-  const parts=desc.split("-");
-  const houseName=parts[0]?parts[0].trim():"";
-  const houseMatch=matchHousing(houseName)||{code:houseName,matchedName:houseName};
-  const code=houseMatch.code;
+function buildVoucherFromCashflowDesc(desc, amount, date, rocYear){
+  // 清理說明文字
+  const d=desc.replace(/[\r\n]+/g," ").replace(/\s+/g," ").trim();
+
+  // 抓房源名稱（第一個 - 之前）
+  const houseName=d.split("-")[0].trim();
+  const houseMatch=matchHousing(houseName);
+  const code=houseMatch?houseMatch.code:houseName;
   const lines=[];
 
-  // 判斷類型
-  const hasRent=desc.includes("租金");
-  const hasDeposit=desc.includes("押金");
-  const hasMgmt=desc.includes("代管費");
-  const hasService=desc.includes("服務費")||desc.includes("定金");
-  const hasMgmtFee=desc.includes("系統管理費");
-
-  if(hasDeposit && hasRent){
-    // 租金+押金混合：需要從收款單拆分，這裡用全額先借，貸方待補
-    // 嘗試從 fangState 收款單找對應
-    const receipt=fangState.receipt?fangState.receipt.find(r=>
-      matchHousing(r.houseName)&&matchHousing(r.houseName).code===code
-      &&r.typeRaw.includes("租金+押金")):null;
-    if(receipt){
-      const lines2=buildFangReceiptLines(receipt);
-      return lines2.map(l=>({...l,acctCode:l.code,rocStr,rocYear}));
-    }
-    // 找不到收款單，整筆借入，貸方標記待補
-    lines.push({acctCode:"1110-01",custCode:code,dc:1,amount,summary:desc,rocStr,rocYear});
-    lines.push({acctCode:"2205-02",custCode:code,dc:2,amount,summary:desc+"（待確認拆分）",rocStr,rocYear});
-  } else if(hasDeposit){
-    lines.push({acctCode:"1110-01",custCode:code,dc:1,amount,summary:desc,rocStr,rocYear});
-    lines.push({acctCode:"2205-03",custCode:code,dc:2,amount,summary:desc,rocStr,rocYear});
-  } else if(hasRent){
-    lines.push({acctCode:"1110-01",custCode:code,dc:1,amount,summary:desc,rocStr,rocYear});
-    if(hasMgmtFee){
-      // 有系統管理費，從描述抓金額（如有），否則整筆租金
-      lines.push({acctCode:"2205-02",custCode:code,dc:2,amount,summary:desc,rocStr,rocYear});
-    } else {
-      lines.push({acctCode:"2205-02",custCode:code,dc:2,amount,summary:desc,rocStr,rocYear});
-    }
-  } else if(hasMgmt){
-    lines.push({acctCode:"1110-01",custCode:code,dc:1,amount,summary:desc,rocStr,rocYear});
-    lines.push({acctCode:"2205-01",custCode:code,dc:2,amount,summary:desc,rocStr,rocYear});
-  } else if(hasService){
-    lines.push({acctCode:"1110-02",custCode:code,dc:1,amount,summary:desc,rocStr,rocYear});
-    lines.push({acctCode:"4101-03",custCode:code,dc:2,amount:Math.round(amount/1.05),summary:desc,rocStr,rocYear});
-    lines.push({acctCode:"2290",custCode:code,dc:2,amount:amount-Math.round(amount/1.05),summary:desc,rocStr,rocYear});
-  } else {
-    // 無法判斷，整筆借入標記待確認
-    lines.push({acctCode:"1110-01",custCode:code,dc:1,amount,summary:desc,rocStr,rocYear});
-    lines.push({acctCode:"PENDING",custCode:code,dc:2,amount,summary:desc+"（科目待確認）",rocStr,rocYear});
+  // 從說明文字抓金額的輔助函式
+  function grabAmt(pattern){
+    const m=d.match(pattern);
+    return m?parseInt(m[1].replace(/,/g,"")):0;
   }
+
+  // ── 判斷類型 ──
+  const hasDeposit=d.includes("押金");
+  const hasRent=d.includes("租金");
+  const hasService=d.includes("服務費");
+  const hasMgmt=d.includes("代管費")||d.includes("代墊款");
+
+  if(hasDeposit && (hasRent || hasService)){
+    // F. 押金＋租金（混合）
+    // 押金：抓「總計$XXXX」或「押金$XXXX」
+    const depTotal=grabAmt(/總計\$?([\d,]+)/)||grabAmt(/押金\$?([\d,]+)/);
+    const rent=grabAmt(/租金\$?([\d,]+)/);
+    const service=grabAmt(/服務費\$?([\d,]+)/);
+
+    // 借方：合計一筆（所有收入加總）
+    lines.push({acctCode:"1110-01",custCode:code,dc:1,amount,summary:d});
+    // 貸方
+    if(depTotal>0) lines.push({acctCode:"2205-03",custCode:code,dc:2,amount:depTotal,summary:`${houseName}-押金`});
+    if(rent>0)     lines.push({acctCode:"2205-02",custCode:code,dc:2,amount:rent,summary:d});
+    if(service>0)  lines.push({acctCode:"2205-01",custCode:code,dc:2,amount:service,summary:d});
+
+    // 驗證借貸平衡，若不平衡加在 2205-02
+    const creditSum=(depTotal||0)+(rent||0)+(service||0);
+    if(creditSum!==amount && creditSum>0){
+      const diff=amount-creditSum;
+      // 補差額到租金
+      const rentIdx=lines.findIndex(l=>l.acctCode==="2205-02");
+      if(rentIdx>=0) lines[rentIdx].amount+=diff;
+      else lines.push({acctCode:"2205-02",custCode:code,dc:2,amount:diff,summary:d});
+    }
+
+  }else if(hasDeposit){
+    // E. 純押金
+    lines.push({acctCode:"1110-01",custCode:code,dc:1,amount,summary:d});
+    lines.push({acctCode:"2205-03",custCode:code,dc:2,amount,summary:d});
+
+  }else if(hasRent){
+    // A. 一般租金
+    lines.push({acctCode:"1110-01",custCode:code,dc:1,amount,summary:d});
+    lines.push({acctCode:"2205-02",custCode:code,dc:2,amount,summary:d});
+
+  }else if(hasMgmt||hasService){
+    // B/C. 代管費 / 服務費
+    lines.push({acctCode:"1110-01",custCode:code,dc:1,amount,summary:d});
+    lines.push({acctCode:"2205-01",custCode:code,dc:2,amount,summary:d});
+
+  }else{
+    // 無法判斷，標記待確認
+    lines.push({acctCode:"1110-01",custCode:code,dc:1,amount,summary:d});
+    lines.push({acctCode:"PENDING",custCode:code,dc:2,amount,summary:d+"（科目待確認）"});
+  }
+
   return lines;
 }
 
@@ -1404,31 +1442,42 @@ document.getElementById("fang-btn-voucher").addEventListener("click",()=>{
   }
   const rows=[VOUCHER_HEADERS];
 
-  // 合併同日期同摘要的多筆（分筆匯入合併）
+  // ── 合併分兩筆的項目 ──
+  // 規則：說明含「總計」的那筆，代表是第二筆（補充筆），要跟前一筆同房源合併
   const merged=[];
   fangState.cashflowFile.forEach(row=>{
-    if(row.isUnmatched) return; // 未核對的跳過
-    // 找前一筆同日期同房源
     const houseName=row.desc.split("-")[0].trim();
-    const prev=merged[merged.length-1];
-    if(prev && prev.houseName===houseName && prev.date===row.date &&
-       !row.desc.includes("★")){
-      // 合併金額
-      prev.amount+=row.amount;
-    } else {
-      merged.push({...row, houseName});
+    const isSecondPart=row.desc.includes("總計");
+
+    if(isSecondPart && merged.length>0){
+      // 找前面最近的同房源筆
+      for(let i=merged.length-1;i>=0;i--){
+        const prevHouse=merged[i].desc.split("-")[0].trim();
+        if(prevHouse===houseName){
+          // 合併金額，更新說明為這筆（含完整資訊）
+          merged[i].amount+=row.amount;
+          merged[i].desc=row.desc; // 用含「總計」的那筆說明，資訊更完整
+          merged[i].merged=true;
+          break;
+        }
+      }
+    }else{
+      merged.push({...row, houseName, merged:false});
     }
   });
 
-  // 產出傳票
+  // ── 產出傳票 ──
   merged.forEach(row=>{
-    // 計算民國年
-    const rocYear=row.date?parseInt(row.date):fangState.matched[0]?.source.rocYear||115;
-    const rocStr=row.date||"";
-    const lines=buildVoucherFromCashflowDesc(row.desc, row.amount, rocStr, rocYear);
+    // 從日期字串解析民國年（例如「6月1日」→ 從工具狀態取年份）
+    const rocYear=fangState.matched&&fangState.matched.length>0
+      ?fangState.matched[0].source.rocYear
+      :115;
+    const dateStr=row.date||"";
+
+    const lines=buildVoucherFromCashflowDesc(row.desc, row.amount, dateStr, rocYear);
     lines.forEach(line=>{
       const r=new Array(VOUCHER_HEADERS.length).fill(null);
-      r[0]=rocYear; r[1]="DEFAULT"; r[2]=3; r[3]=rocStr;
+      r[0]=rocYear; r[1]="DEFAULT"; r[2]=3; r[3]=dateStr;
       r[9]=line.acctCode; r[10]=line.custCode;
       r[12]=line.dc; r[13]=line.amount;
       r[22]=line.summary;
