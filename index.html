@@ -1958,9 +1958,11 @@ function renderBizResult(){
 
 function updateBizButtons(){
   if(!bizState.matched)return;
-  // 定金/斡旋金科目未補，先不能下載傳票
   const hasPending=bizState.matched.some(item=>ACCOUNTS[item.source.acctKey].lines.length===0);
   const ready=bizState.matched.length>0&&!hasPending;
+  // debug
+  const debugInfo=`matched:${bizState.matched.length} hasPending:${hasPending} ready:${ready} acctKeys:${bizState.matched.map(i=>i.source.acctKey).join(',')}`;
+  document.getElementById("biz-bal").innerHTML+=' <small style="color:#888">'+debugInfo+'</small>';
   document.getElementById("biz-btn-voucher").disabled=!ready;
   document.getElementById("biz-btn-cashflow").disabled=bizState.matched.length===0;
 }
