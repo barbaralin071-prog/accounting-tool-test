@@ -495,7 +495,7 @@ button.btn.ghost:hover{background:var(--accent-soft);}
             <th>#</th><th>收款單編號</th><th>收款日期</th>
             <th class="right">金額</th><th>類型</th>
             <th>轉號後五碼</th><th>地址</th><th>回報人員</th>
-            <th>收款帳戶</th><th>房客／屋主</th>
+            <th>收款帳戶</th>
           </tr></thead>
           <tbody id="biz-tb-matched"></tbody>
         </table>
@@ -706,7 +706,7 @@ const ACCOUNTS = {
       {code:"4101-03", dc:2, amountType:"untaxed"},
       {code:"2290",    dc:2, amountType:"tax"},
     ],
-    buildSummary(ctx){return ctx.address+"-"+ctx.tenantOrOwner+"-服務費";},
+    buildSummary(ctx){return ctx.address+"-服務費";},
   },
   biz_deposit:{
     label:"業務處－國泰 #57668（定金）",
@@ -1874,13 +1874,6 @@ function renderBizResult(){
     [["1110-02","業務處－國泰 #57668"]].forEach(([v,l])=>selAcct.add(new Option(l,v)));
     selAcct.value="1110-02";
 
-    // 房客/屋主 select
-    const selTO=document.createElement("select");
-    selTO.className=s.tenantOrOwner?"":"empty";
-    ["","房客","屋主"].forEach(v=>selTO.add(new Option(v||"請選擇",v)));
-    selTO.value=s.tenantOrOwner;
-    selTO.addEventListener("change",()=>{s.tenantOrOwner=selTO.value;selTO.classList.toggle("empty",!selTO.value);updateBizButtons();});
-
     td=(html)=>{const t=document.createElement("td");t.innerHTML=html;return t;};
     tde=(el)=>{const t=document.createElement("td");t.appendChild(el);return t;};
 
@@ -1893,10 +1886,9 @@ function renderBizResult(){
     tr.appendChild(td(s.address));
     tr.appendChild(td(s.reporter));
     tr.appendChild(tde(selAcct));
-    tr.appendChild(tde(selTO));
     tbM.appendChild(tr);
   });
-  if(!matched.length)tbM.innerHTML=`<tr><td colspan="10" style="color:var(--ink-faint);text-align:center;padding:16px;">無比對成功筆數</td></tr>`;
+  if(!matched.length)tbM.innerHTML=`<tr><td colspan="9" style="color:var(--ink-faint);text-align:center;padding:16px;">無比對成功筆數</td></tr>`;
 
   // 未核對（含現金）
   const allUnmatched=[...unmatched,...(bizState.cashOnly||[])];
@@ -1960,14 +1952,11 @@ function renderBizResult(){
 
 function updateBizButtons(){
   if(!bizState.matched)return;
-  // 服務費的都需要選房客/屋主才算完整
-  const serviceItems=bizState.matched.filter(item=>item.source.acctKey==="biz_service");
-  const allTOSet=serviceItems.every(item=>item.source.tenantOrOwner);
   // 定金/斡旋金科目未補，先不能下載傳票
   const hasPending=bizState.matched.some(item=>ACCOUNTS[item.source.acctKey].lines.length===0);
-  const ready=bizState.matched.length>0 && allTOSet && !hasPending;
+  const ready=bizState.matched.length>0&&!hasPending;
   document.getElementById("biz-btn-voucher").disabled=!ready;
-  document.getElementById("biz-btn-cashflow").disabled=bizState.matched.length===0||!allTOSet;
+  document.getElementById("biz-btn-cashflow").disabled=bizState.matched.length===0;
 }
 
 /* ══════════════════════════════════════
@@ -2276,17 +2265,19 @@ document.getElementById("biz-inv-btn-voucher").addEventListener("click",()=>{
     const{cfRow,invs}=item;
     const addr=invs[0].caseAddr||cfRow.desc.split("-")[0];
     const rocYear=invs[0].rocYear||115;
-    const dateStr=invs[0].rocDateStr||cfRow.date||"";
-    // 第一列：借方 1110-02 全額
+    const dateStr=cfRow.date||"";
+
+    // 借方第一列：1110-02，摘要含所有買受人
     const buyersDesc=invs.map(inv=>`${inv.buyerName}-服務費`).join("+");
     rows.push([rocYear,"DEFAULT",3,dateStr,"1110-02","",1,cfRow.amount,
       `${addr}-${buyersDesc}`]);
+
     // 每張發票兩列貸方
     invs.forEach(inv=>{
-      const s1=`${inv.caseAddr}-${inv.buyerName}-服務費`;
-      const s2=`${inv.caseAddr}-${inv.buyerName}-服務費-${inv.invoiceNo}`;
-      rows.push([rocYear,"DEFAULT",3,inv.rocDateStr,"4101-03","",2,inv.untaxed,s1]);
-      rows.push([rocYear,"DEFAULT",3,inv.rocDateStr,"2290","",2,inv.tax,s2]);
+      const s1=`${addr}-${inv.buyerName}-服務費`;
+      const s2=`${addr}-${inv.buyerName}-服務費-${inv.invoiceNo}`;
+      rows.push([rocYear,"DEFAULT",3,inv.rocDateStr||dateStr,"4101-03","",2,inv.untaxed,s1]);
+      rows.push([rocYear,"DEFAULT",3,inv.rocDateStr||dateStr,"2290","",2,inv.tax,s2]);
     });
   });
 
