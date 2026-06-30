@@ -2307,12 +2307,15 @@ function parseFangInvoiceXlsx(data){
   return aoa.slice(hi+1).filter(r=>r[col("發票號碼")]!=null).map(r=>{
     const note=r[col("發票備註")]?String(r[col("發票備註")]).trim():"";
     const brandName=r[col("發票品名(首欄)")]?String(r[col("發票品名(首欄)")]).trim():"";
-    const caseName=r[col("合約案件名稱")]?String(r[col("合約案件名稱")]).trim():"";
-    // 判斷類型
+    // 案件名稱：優先用合約案件名稱，備用從備註第一段抓
+    const caseNameCol=r[col("合約案件名稱")]?String(r[col("合約案件名稱")]).trim():"";
+    const caseNameNote=note.includes("/")?note.split("/")[0].trim():"";
+    const caseName=caseNameCol||caseNameNote;
+    // 判斷類型：品名優先，否則從備註判斷
     let type="服務費";
     if(brandName.includes("修繕費")||note.includes("修繕費")) type="修繕費";
     else if(brandName.includes("代管費")||note.includes("代管費")) type="代管費";
-    // 從備註抓年月（例如 八德106/11506修繕費/648/32）
+    // 年月：從備註第二段抓（例如 11506）
     const parts=note.split("/");
     const ymMatch=parts.length>1?parts[1].match(/(\d{3,5})/):null;
     const yearMonth=ymMatch?ymMatch[1]:"";
@@ -2323,12 +2326,14 @@ function parseFangInvoiceXlsx(data){
     // 客供商代號
     const houseMatch=matchHousing(caseName);
     const custCode=houseMatch?houseMatch.code:caseName;
+    // 金額：小計未稅(col 67)、營業稅(col 69)、總金額(col 71)
+    const untaxed=Math.round(Number(r[67])||0);
+    const tax=Math.round(Number(r[69])||0);
+    const total=Number(r[71])||0;
     return{
       invoiceNo:String(r[col("發票號碼")]).trim(),
       caseName, yearMonth, rocDateStr, rocYear, custCode, type,
-      untaxed:Math.round(Number(r[col("小計（未稅）")])||0),
-      tax:Math.round(Number(r[col("營業稅")])||0),
-      total:Number(r[col("總金額")])||0,
+      untaxed, tax, total,
     };
   });
 }
