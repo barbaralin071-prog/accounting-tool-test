@@ -706,7 +706,7 @@ const ACCOUNTS = {
       {code:"4101-03", dc:2, amountType:"untaxed"},
       {code:"2290",    dc:2, amountType:"tax"},
     ],
-    buildSummary(ctx){return ctx.address+"-服務費";},
+    buildSummary(ctx){return (ctx.fullAddr||ctx.address)+"-服務費";},
   },
   biz_deposit:{
     label:"業務處－國泰 #57668（定金）",
@@ -915,6 +915,10 @@ function parseRagicXlsx(data){
       if(typeRaw.includes("定金"))acctKey="biz_deposit";
       else if(typeRaw.includes("斡旋金"))acctKey="biz_earnest";
       const last5raw=r[col("轉號後五碼")];
+      const city=r[col("縣市")]?String(r[col("縣市")]).trim():"";
+      const district=r[col("行政區")]?String(r[col("行政區")]).trim():"";
+      const streetAddr=r[col("地址.1")]?String(r[col("地址.1")]).trim():"";
+      const fullAddr=(city+district+streetAddr)||r[col("地址")]||"";
       return{
         id:r[col("收款單編號")],
         dateKey:roc.dateKey, rocStr:roc.str,
@@ -922,10 +926,11 @@ function parseRagicXlsx(data){
         typeRaw, acctKey,
         last5:ragicLast5(last5raw),
         address:r[col("地址")]||"",
+        fullAddr,
         reporter:r[col("回報人員")]||"",
         dept:r[col("回報部門")]||"",
         account:r[col("收款帳戶")]||"",
-        tenantOrOwner:"",// 業務處需手選
+        tenantOrOwner:"",
       };
     });
 }
@@ -1968,7 +1973,7 @@ document.getElementById("biz-btn-voucher").addEventListener("click",()=>{
     const s=item.source;
     const acct=ACCOUNTS[s.acctKey];
     if(!acct.lines.length)return;
-    const summary=acct.buildSummary({address:s.address,tenantOrOwner:s.tenantOrOwner});
+    const summary=acct.buildSummary({address:s.address,fullAddr:s.fullAddr,tenantOrOwner:s.tenantOrOwner});
     acct.lines.forEach(line=>{
       const row=new Array(VOUCHER_HEADERS.length).fill(null);
       row[0]=toRoc(s.dateKey).year; row[1]="DEFAULT"; row[2]=3;
@@ -2004,7 +2009,7 @@ document.getElementById("biz-btn-cashflow").addEventListener("click",()=>{
       const s=item.source;
       const roc=toRoc(s.dateKey);
       const dateStr=roc.month+"月"+roc.day+"日";
-      const summary=acct.buildSummary({address:s.address,tenantOrOwner:s.tenantOrOwner});
+      const summary=acct.buildSummary({address:s.address,fullAddr:s.fullAddr,tenantOrOwner:s.tenantOrOwner});
       aoa.push([dateStr===lastDate?null:dateStr, summary, null, s.amount, null, null, null]);
       lastDate=dateStr;
     });
