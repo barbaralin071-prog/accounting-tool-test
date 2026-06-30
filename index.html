@@ -25,11 +25,19 @@
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
   const provider = new GoogleAuthProvider();
+  provider.setCustomParameters({ hd: ALLOWED_DOMAIN });
 
   // 監聽登入狀態
   onAuthStateChanged(auth, user => {
     if(user){
-      // 測試模式：暫時允許所有 Google 帳號，確認功能後再加網域限制
+      const domain = user.email.split("@")[1];
+      if(domain !== ALLOWED_DOMAIN){
+        // 非公司帳號，強制登出
+        signOut(auth);
+        showLoginPage("此工具僅限 @" + ALLOWED_DOMAIN + " 帳號使用，請使用公司帳號登入");
+        return;
+      }
+      // 公司帳號，顯示工具
       document.getElementById("login-page").style.display = "none";
       document.getElementById("app-page").style.display = "block";
       document.getElementById("user-name").textContent = user.displayName || user.email;
@@ -234,6 +242,7 @@ button.btn.ghost:hover{background:var(--accent-soft);}
 <div class="tabs">
   <button class="tab active" data-tab="fang">🏠 房管處</button>
   <button class="tab" data-tab="biz">💼 業務處</button>
+  <button class="tab" data-tab="invoice">🧾 電子發票</button>
 </div>
 
 <!-- ══════════════════════════════════════════
@@ -481,6 +490,69 @@ button.btn.ghost:hover{background:var(--accent-soft);}
     </div>
   </div>
 </div><!-- /panel-biz -->
+
+<!-- ══════════════════════════════════════════
+     電子發票 Panel
+════════════════════════════════════════════ -->
+<div class="panel" id="panel-invoice">
+
+  <div id="invoice-upload">
+    <div style="font-size:13px;color:var(--ink-soft);margin-bottom:12px;">
+      上傳電子發票檔案，工具自動判斷類型（服務費／代管費／修繕費）並產出傳票匯入檔
+    </div>
+    <div class="upload-row" style="grid-template-columns:1fr;">
+      <div>
+        <div class="dropzone" id="invoice-dz-file">
+          <div class="dz-icon">🧾</div>
+          <div class="dz-label">上傳電子發票資料</div>
+          <div class="dz-hint">電子發票開立_XXXX.xlsx</div>
+        </div>
+        <input type="file" id="invoice-file-input" accept=".xlsx" hidden>
+      </div>
+    </div>
+    <div class="errbox" id="invoice-err"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px;">
+      <button class="btn primary" id="invoice-btn-convert" disabled>產出傳票匯入檔</button>
+    </div>
+  </div>
+
+  <div id="invoice-result" hidden>
+    <div class="card">
+      <div class="match-summary">
+        <div class="ms-cell ok">
+          <div class="ms-num" id="invoice-cnt-service">0</div>
+          <div class="ms-lbl">服務費</div>
+        </div>
+        <div class="ms-cell blue">
+          <div class="ms-num" id="invoice-cnt-mgmt">0</div>
+          <div class="ms-lbl">代管費</div>
+        </div>
+        <div class="ms-cell grey">
+          <div class="ms-num" id="invoice-cnt-repair">0</div>
+          <div class="ms-lbl">修繕費</div>
+        </div>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th>#</th><th>發票號碼</th><th>案件名稱</th>
+            <th>類型</th><th>發票日期</th>
+            <th class="right">未稅</th><th class="right">稅額</th><th class="right">含稅</th>
+          </tr></thead>
+          <tbody id="invoice-tb"></tbody>
+        </table>
+      </div>
+      <div class="actbar">
+        <div class="bal" id="invoice-bal">—</div>
+        <div class="btns">
+          <button class="btn secondary" id="invoice-btn-reset">重新上傳</button>
+          <button class="btn primary" id="invoice-btn-download">下載傳票匯入檔</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /panel-invoice -->
 
 <footer style="margin-top:32px;padding-top:14px;border-top:1px solid var(--border);font-size:12px;color:var(--ink-faint);display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;">
   <span>房源版本：2026-06-17，共 282 筆</span>
@@ -1832,8 +1904,151 @@ document.getElementById("biz-btn-cashflow").addEventListener("click",()=>{
   XLSX.writeFile(wb,"金流表_業務處_"+new Date().toISOString().slice(0,10)+".xlsx");
 });
 
-// 輔助：讓 dateKey 能被 toRoc 吃（整數 YYYYMMDD）
-const _origToRoc=toRoc;
+/* ══════════════════════════════════════
+   電子發票 Tab 邏輯
+══════════════════════════════════════ */
+
+// 解析房管處電子發票
+function parseInvoiceXlsx(data){
+  const wb=XLSX.read(data,{type:"array"});
+  const ws=wb.Sheets[wb.SheetNames[0]];
+  const aoa=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null});
+  const hi=aoa.findIndex(r=>r.some(c=>c==="發票號碼"));
+  if(hi===-1)throw new Error("找不到「發票號碼」欄位，請確認是電子發票格式");
+  const headers=aoa[hi];
+  const col=n=>headers.indexOf(n);
+  return aoa.slice(hi+1).filter(r=>r[col("發票號碼")]!=null).map(r=>{
+    const brandName=r[col("發票品名(首欄)")]?String(r[col("發票品名(首欄)")]).trim():"";
+    const note=r[col("發票備註")]?String(r[col("發票備註")]).trim():"";
+    const caseName=r[col("合約案件名稱")]?String(r[col("合約案件名稱")]).trim():"";
+    // 判斷類型：品名有值優先，否則從備註判斷
+    let type="服務費";
+    if(brandName.includes("修繕費")||note.includes("修繕費")) type="修繕費";
+    else if(brandName.includes("代管費")||note.includes("代管費")) type="代管費";
+    else if(brandName.includes("服務費")||note.includes("服務費")) type="服務費";
+    // 從備註抓年月（例如 11506）
+    const ymMatch=note.match(/(\d{3,5})(?:月|代|服|修)/);
+    const yearMonth=ymMatch?ymMatch[1]:"";
+    // 日期轉民國
+    const dateVal=r[col("發票日期")];
+    let rocDateStr="";
+    if(dateVal){
+      try{
+        const roc=toRoc(dateVal);
+        rocDateStr=roc.str;
+      }catch(e){}
+    }
+    return{
+      invoiceNo:String(r[col("發票號碼")]).trim(),
+      caseName, type, yearMonth, rocDateStr,
+      untaxed:Number(r[col("小計（未稅）")])||0,
+      tax:Number(r[col("營業稅")])||0,
+      total:Number(r[col("總金額")])||0,
+    };
+  });
+}
+
+// 科目對應
+function invoiceAcctCode(type){
+  if(type==="代管費") return "4101-02";
+  if(type==="修繕費") return "4101-023";
+  return "4101-022"; // 服務費
+}
+
+// 產出電子發票傳票（9欄）
+function buildInvoiceVoucherRows(invoices){
+  const HEADERS=["年度","傳票號碼","傳票種類","日期","科目代號","客戶供應商代號","借/貸","金額","長摘要"];
+  const rows=[HEADERS];
+  invoices.forEach(inv=>{
+    const houseMatch=matchHousing(inv.caseName);
+    const code=houseMatch?houseMatch.code:inv.caseName;
+    const rocYear=inv.rocDateStr?parseInt(inv.rocDateStr.split("/")[0]):115;
+    const summary1=`${inv.caseName}-${inv.yearMonth}-${inv.type}`;
+    const summary2=`${inv.caseName}-${inv.yearMonth}-${inv.type}-${inv.invoiceNo}`;
+    // 第一列：未稅
+    rows.push([rocYear,"",3,inv.rocDateStr,invoiceAcctCode(inv.type),code,2,
+      Math.round(inv.untaxed),summary1]);
+    // 第二列：稅額
+    rows.push([rocYear,"",3,inv.rocDateStr,"2290",code,2,
+      Math.round(inv.tax),summary2]);
+  });
+  return rows;
+}
+
+// 狀態
+let invoiceState={invoices:[]};
+
+// 上傳綁定
+bindDropzone("invoice-dz-file","invoice-file-input",async(file,dz)=>{
+  try{
+    const data=await readFile(file);
+    invoiceState.invoices=parseInvoiceXlsx(data);
+    dz.classList.add("loaded");
+    dz.querySelector(".dz-label").textContent="✓ "+file.name;
+    document.getElementById("invoice-btn-convert").disabled=false;
+    renderInvoicePreview();
+  }catch(e){showErr("invoice-err",e.message);}
+});
+
+document.getElementById("invoice-btn-convert").addEventListener("click",()=>{
+  renderInvoicePreview();
+  document.getElementById("invoice-upload").hidden=true;
+  document.getElementById("invoice-result").hidden=false;
+});
+
+document.getElementById("invoice-btn-reset").addEventListener("click",()=>{
+  invoiceState={invoices:[]};
+  document.getElementById("invoice-upload").hidden=false;
+  document.getElementById("invoice-result").hidden=true;
+  const dz=document.getElementById("invoice-dz-file");
+  dz.classList.remove("loaded");
+  dz.querySelector(".dz-label").textContent="上傳電子發票資料";
+  document.getElementById("invoice-file-input").value="";
+  document.getElementById("invoice-btn-convert").disabled=true;
+});
+
+document.getElementById("invoice-btn-download").addEventListener("click",()=>{
+  const rows=buildInvoiceVoucherRows(invoiceState.invoices);
+  const ws=XLSX.utils.aoa_to_sheet(rows);
+  ws["!cols"]=[{wch:8},{wch:12},{wch:10},{wch:14},{wch:14},{wch:16},{wch:6},{wch:10},{wch:40}];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,"傳票累積檔");
+  XLSX.writeFile(wb,"傳票匯入_電子發票_"+new Date().toISOString().slice(0,10)+".xlsx");
+});
+
+function renderInvoicePreview(){
+  const invs=invoiceState.invoices;
+  const cntService=invs.filter(i=>i.type==="服務費").length;
+  const cntMgmt=invs.filter(i=>i.type==="代管費").length;
+  const cntRepair=invs.filter(i=>i.type==="修繕費").length;
+  document.getElementById("invoice-cnt-service").textContent=cntService;
+  document.getElementById("invoice-cnt-mgmt").textContent=cntMgmt;
+  document.getElementById("invoice-cnt-repair").textContent=cntRepair;
+
+  const tb=document.getElementById("invoice-tb");
+  tb.innerHTML="";
+  invs.forEach((inv,i)=>{
+    const tagCls=inv.type==="服務費"?"ok":inv.type==="代管費"?"blue":"grey";
+    const tr=document.createElement("tr");
+    tr.innerHTML=`
+      <td>${i+1}</td>
+      <td class="mono">${inv.invoiceNo}</td>
+      <td>${inv.caseName}</td>
+      <td><span class="tag ${tagCls}">${inv.type}</span></td>
+      <td class="mono">${inv.rocDateStr}</td>
+      <td class="mono right">${fmtMoney(Math.round(inv.untaxed))}</td>
+      <td class="mono right">${fmtMoney(Math.round(inv.tax))}</td>
+      <td class="mono right">${fmtMoney(inv.total)}</td>
+    `;
+    tb.appendChild(tr);
+  });
+
+  const totalUntaxed=invs.reduce((s,i)=>s+Math.round(i.untaxed),0);
+  const totalTax=invs.reduce((s,i)=>s+Math.round(i.tax),0);
+  const totalAmt=invs.reduce((s,i)=>s+i.total,0);
+  document.getElementById("invoice-bal").innerHTML=
+    `共 ${invs.length} 張發票｜未稅合計 ${fmtMoney(totalUntaxed)}｜稅額合計 ${fmtMoney(totalTax)}｜含稅合計 ${fmtMoney(totalAmt)}`;
+}
 </script>
 </div><!-- /app -->
 </div><!-- /app-page -->
