@@ -711,16 +711,20 @@ const ACCOUNTS = {
   biz_deposit:{
     label:"業務處－國泰 #57668（定金）",
     cashflowHeader:"國泰世華/仁愛分行 #57668 - 銀存明細  業務處",
-    // TODO: 待補科目
-    lines:[],
-    buildSummary(ctx){return ctx.address+"-定金（待補規則）";},
+    lines:[
+      {code:"1110-02", dc:1, amountType:"full"},
+      {code:"2205-01", dc:2, amountType:"full"},
+    ],
+    buildSummary(ctx){return (ctx.fullAddr||ctx.address)+"-定金";},
   },
   biz_earnest:{
     label:"業務處－國泰 #57668（斡旋金）",
     cashflowHeader:"國泰世華/仁愛分行 #57668 - 銀存明細  業務處",
-    // TODO: 待補科目
-    lines:[],
-    buildSummary(ctx){return ctx.address+"-斡旋金（待補規則）";},
+    lines:[
+      {code:"1110-02", dc:1, amountType:"full"},
+      {code:"2205-01", dc:2, amountType:"full"},
+    ],
+    buildSummary(ctx){return (ctx.fullAddr||ctx.address)+"-斡旋金";},
   },
 };
 
@@ -1960,9 +1964,6 @@ function updateBizButtons(){
   if(!bizState.matched)return;
   const hasPending=bizState.matched.some(item=>ACCOUNTS[item.source.acctKey].lines.length===0);
   const ready=bizState.matched.length>0&&!hasPending;
-  // debug
-  const debugInfo=`matched:${bizState.matched.length} hasPending:${hasPending} ready:${ready} acctKeys:${bizState.matched.map(i=>i.source.acctKey).join(',')}`;
-  document.getElementById("biz-bal").innerHTML+=' <small style="color:#888">'+debugInfo+'</small>';
   document.getElementById("biz-btn-voucher").disabled=!ready;
   document.getElementById("biz-btn-cashflow").disabled=bizState.matched.length===0;
 }
