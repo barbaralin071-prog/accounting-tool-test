@@ -1990,33 +1990,49 @@ document.getElementById("biz-btn-voucher").addEventListener("click",()=>{
 });
 
 document.getElementById("biz-btn-cashflow").addEventListener("click",()=>{
-  // 按帳戶分組
-  const grouped={};
-  bizState.matched.forEach(item=>{
-    const k=item.source.acctKey;
-    (grouped[k]=grouped[k]||[]).push(item);
-  });
+  const acct=ACCOUNTS["biz_service"];
   const wb=XLSX.utils.book_new();
-  Object.keys(grouped).forEach(key=>{
-    const acct=ACCOUNTS[key];
-    const txns=[...grouped[key]].sort((a,b)=>a.source.dateKey-b.source.dateKey);
-    const roc0=toRoc(txns[0].source.dateKey);
-    const aoa=[];
-    aoa.push([roc0.year+"年", acct.cashflowHeader,null,null,null,null,null]);
-    aoa.push(["日期",null,"單號","收入","支出","匯費","餘額"]);
-    let lastDate="";
-    txns.forEach(item=>{
-      const s=item.source;
-      const roc=toRoc(s.dateKey);
-      const dateStr=roc.month+"月"+roc.day+"日";
-      const summary=acct.buildSummary({address:s.address,fullAddr:s.fullAddr,tenantOrOwner:s.tenantOrOwner});
-      aoa.push([dateStr===lastDate?null:dateStr, summary, null, s.amount, null, null, null]);
-      lastDate=dateStr;
+
+  // 建立網銀index → 摘要 的 map
+  const bankIndexMap=new Map();
+  bizState.bank.forEach((b,i)=>bankIndexMap.set(b,i));
+  const bankSummaryMap=new Map();
+
+  bizState.matched.forEach(item=>{
+    const s=item.source;
+    const summary=acct.buildSummary({address:s.address,fullAddr:s.fullAddr,tenantOrOwner:s.tenantOrOwner});
+    const banks=Array.isArray(item.bank)?item.bank:[item.bank];
+    banks.forEach(b=>{
+      const idx=bankIndexMap.get(b);
+      if(idx!==undefined) bankSummaryMap.set(idx,summary);
     });
-    const ws=XLSX.utils.aoa_to_sheet(aoa);
-    ws["!cols"]=[{wch:10},{wch:36},{wch:12},{wch:12},{wch:10},{wch:8},{wch:12}];
-    XLSX.utils.book_append_sheet(wb,ws,acct.label.replace(/[\\/?*\[\]:]/g,"").slice(0,31));
   });
+
+  // 按網銀原始順序輸出
+  const roc0=bizState.bank.length?toRoc(bizState.bank[0].raw[0]):toRoc(new Date());
+  const aoa=[];
+  aoa.push([roc0.year+"年", acct.cashflowHeader,null,null,null,null,null]);
+  aoa.push(["日期",null,"說明","收入","支出","匯費","餘額"]);
+
+  let lastDate="";
+  bizState.bank.forEach((b,i)=>{
+    const roc=toRoc(b.raw[0]);
+    const dateStr=roc.month+"月"+roc.day+"日";
+    const dateCell=dateStr===lastDate?null:dateStr;
+
+    if(bankSummaryMap.has(i)){
+      aoa.push([dateCell, bankSummaryMap.get(i), null, b.amount, null, null, null]);
+    }else{
+      // 未比對到：標記提醒出納
+      const note=b.note?`【待填寫摘要】${b.note}`:"【待填寫摘要】";
+      aoa.push([(dateCell?dateCell+" ★":null), note, null, b.amount, null, null, null]);
+    }
+    lastDate=dateStr;
+  });
+
+  const ws=XLSX.utils.aoa_to_sheet(aoa);
+  ws["!cols"]=[{wch:12},{wch:50},{wch:12},{wch:12},{wch:10},{wch:8},{wch:12}];
+  XLSX.utils.book_append_sheet(wb,ws,"業務處金流表");
   XLSX.writeFile(wb,"金流表_業務處_"+new Date().toISOString().slice(0,10)+".xlsx");
 });
 
