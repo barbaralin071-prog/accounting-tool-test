@@ -389,54 +389,55 @@ button.btn.ghost:hover{background:var(--accent-soft);}
       </div>
     </div>
 
-    <!-- 房管處電子發票區塊 -->
-    <div style="margin-top:28px;padding-top:20px;border-top:2px solid var(--border);">
-      <div style="font-size:14px;font-weight:700;margin-bottom:14px;">
-        🧾 房管處電子發票 → 傳票匯入
-      </div>
-      <div style="font-size:13px;color:var(--ink-soft);margin-bottom:14px;">
-        上傳房管處電子發票，自動判斷類型（修繕費／代管費／服務費）產出傳票匯入檔
-      </div>
-      <div class="card">
-        <div style="padding:16px 18px;border-bottom:1px solid var(--border);">
-          <div class="upload-row" style="grid-template-columns:1fr 1fr;">
-            <div>
-              <div class="dropzone" id="fang-inv-dz">
-                <div class="dz-icon">🧾</div>
-                <div class="dz-label">上傳房管處電子發票</div>
-                <div class="dz-hint">電子發票開立_XXXX.xlsx</div>
-              </div>
-              <input type="file" id="fang-inv-file" accept=".xlsx" hidden>
+  </div><!-- /fang-result -->
+
+  <!-- 房管處電子發票區塊（獨立於比對結果之外，隨時可用）-->
+  <div style="margin-top:28px;padding-top:20px;border-top:2px solid var(--border);">
+    <div style="font-size:14px;font-weight:700;margin-bottom:14px;">
+      🧾 房管處電子發票 → 傳票匯入
+    </div>
+    <div style="font-size:13px;color:var(--ink-soft);margin-bottom:14px;">
+      上傳房管處電子發票，自動判斷類型（修繕費／代管費／服務費）產出傳票匯入檔
+    </div>
+    <div class="card">
+      <div style="padding:16px 18px;border-bottom:1px solid var(--border);">
+        <div class="upload-row" style="grid-template-columns:1fr 1fr;">
+          <div>
+            <div class="dropzone" id="fang-inv-dz">
+              <div class="dz-icon">🧾</div>
+              <div class="dz-label">上傳房管處電子發票</div>
+              <div class="dz-hint">電子發票開立_XXXX.xlsx</div>
             </div>
-            <div style="display:flex;align-items:center;padding:0 12px;">
-              <div id="fang-inv-status" style="font-size:13px;color:var(--ink-soft);">
-                上傳後自動判斷類型並預覽
-              </div>
+            <input type="file" id="fang-inv-file" accept=".xlsx" hidden>
+          </div>
+          <div style="display:flex;align-items:center;padding:0 12px;">
+            <div id="fang-inv-status" style="font-size:13px;color:var(--ink-soft);">
+              上傳後自動判斷類型並預覽
             </div>
           </div>
-          <div class="errbox" id="fang-inv-err"></div>
         </div>
-        <div class="tbl-wrap" id="fang-inv-preview" hidden>
-          <table>
-            <thead><tr>
-              <th>#</th><th>發票號碼</th><th>案件名稱</th>
-              <th>類型</th><th>發票日期</th>
-              <th class="right">未稅</th><th class="right">稅額</th><th class="right">含稅</th>
-            </tr></thead>
-            <tbody id="fang-inv-tb"></tbody>
-          </table>
-        </div>
-        <div class="actbar">
-          <div class="bal" id="fang-inv-bal">—</div>
-          <div class="btns">
-            <button class="btn secondary" id="fang-inv-reset">清除</button>
-            <button class="btn primary" id="fang-inv-download" disabled>下載傳票匯入檔</button>
-          </div>
+        <div class="errbox" id="fang-inv-err"></div>
+      </div>
+      <div class="tbl-wrap" id="fang-inv-preview" hidden>
+        <table>
+          <thead><tr>
+            <th>#</th><th>發票號碼</th><th>案件名稱</th>
+            <th>類型</th><th>發票日期</th>
+            <th class="right">未稅</th><th class="right">稅額</th><th class="right">含稅</th>
+          </tr></thead>
+          <tbody id="fang-inv-tb"></tbody>
+        </table>
+      </div>
+      <div class="actbar">
+        <div class="bal" id="fang-inv-bal">—</div>
+        <div class="btns">
+          <button class="btn secondary" id="fang-inv-reset">清除</button>
+          <button class="btn primary" id="fang-inv-download" disabled>下載傳票匯入檔</button>
         </div>
       </div>
     </div>
-
   </div>
+
 </div><!-- /panel-fang -->
 
 
