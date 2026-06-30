@@ -2304,32 +2304,53 @@ function parseFangInvoiceXlsx(data){
   if(hi===-1)throw new Error("找不到「發票號碼」欄位");
   const headers=aoa[hi];
   const col=n=>headers.indexOf(n);
+
   return aoa.slice(hi+1).filter(r=>r[col("發票號碼")]!=null).map(r=>{
-    const note=r[col("發票備註")]?String(r[col("發票備註")]).trim():"";
+    const note=r[70]?String(r[70]).trim():""; // 備註 col 70
     const brandName=r[col("發票品名(首欄)")]?String(r[col("發票品名(首欄)")]).trim():"";
-    // 案件名稱：優先用合約案件名稱，備用從備註第一段抓
-    const caseNameCol=r[col("合約案件名稱")]?String(r[col("合約案件名稱")]).trim():"";
-    const caseNameNote=note.includes("/")?note.split("/")[0].trim():"";
-    const caseName=caseNameCol||caseNameNote;
-    // 判斷類型：品名優先，否則從備註判斷
+
+    // ── 案件名稱：優先 col 22，備用從備註判斷 ──
+    let caseName=r[22]?String(r[22]).trim():"";
+    if(!caseName && note){
+      // 備註各段以 / 分隔，清除空白
+      const parts=note.split("/").map(s=>s.trim()).filter(Boolean);
+      // 找第一個「看起來像房源名稱」的段落（不是純數字、不是年月、不是公司名）
+      for(const p of parts){
+        const isNum=/^\d+$/.test(p);
+        const isYearMonth=/^\d{4,5}$/.test(p);
+        const isCompany=p.includes("有限公司")||p.includes("股份有限公司");
+        if(!isNum&&!isYearMonth&&!isCompany&&p.length>=2){
+          // 如果含「.」則取第一段（例如「天祥80.11505」→「天祥80」）
+          caseName=p.includes(".")?p.split(".")[0].trim():p;
+          break;
+        }
+      }
+    }
+
+    // ── 判斷類型 ──
     let type="服務費";
     if(brandName.includes("修繕費")||note.includes("修繕費")) type="修繕費";
     else if(brandName.includes("代管費")||note.includes("代管費")) type="代管費";
-    // 年月：從備註第二段抓（例如 11506）
-    const parts=note.split("/");
-    const ymMatch=parts.length>1?parts[1].match(/(\d{3,5})/):null;
+    else if(note.includes("系統費")) type="代管費"; // 系統費歸代管費
+
+    // ── 年月：從備註找5位數字 ──
+    const ymMatch=note.match(/(\d{5})/);
     const yearMonth=ymMatch?ymMatch[1]:"";
-    // 日期
+
+    // ── 日期 ──
     let rocDateStr="";
     try{ rocDateStr=toRoc(r[col("發票日期")]).str; }catch(e){}
     const rocYear=rocDateStr?parseInt(rocDateStr.split("/")[0]):115;
-    // 客供商代號
+
+    // ── 客供商代號 ──
     const houseMatch=matchHousing(caseName);
     const custCode=houseMatch?houseMatch.code:caseName;
-    // 金額：小計未稅(col 67)、營業稅(col 69)、總金額(col 71)
+
+    // ── 金額：col 67 未稅、col 69 稅額、col 71 總金額 ──
     const untaxed=Math.round(Number(r[67])||0);
     const tax=Math.round(Number(r[69])||0);
     const total=Number(r[71])||0;
+
     return{
       invoiceNo:String(r[col("發票號碼")]).trim(),
       caseName, yearMonth, rocDateStr, rocYear, custCode, type,
