@@ -915,9 +915,10 @@ function parseRagicXlsx(data){
       if(typeRaw.includes("定金"))acctKey="biz_deposit";
       else if(typeRaw.includes("斡旋金"))acctKey="biz_earnest";
       const last5raw=r[col("轉號後五碼")];
-      const city=r[col("縣市")]?String(r[col("縣市")]).trim():"";
-      const district=r[col("行政區")]?String(r[col("行政區")]).trim():"";
-      const streetAddr=r[col("地址.1")]?String(r[col("地址.1")]).trim():"";
+      // 地址：直接用 index（縣市 col49、行政區 col50、地址 col51）
+      const city=r[49]?String(r[49]).trim():"";
+      const district=r[50]?String(r[50]).trim():"";
+      const streetAddr=r[51]?String(r[51]).trim():"";
       const fullAddr=(city+district+streetAddr)||r[col("地址")]||"";
       return{
         id:r[col("收款單編號")],
@@ -1968,22 +1969,25 @@ function updateBizButtons(){
    業務處 產出
 ══════════════════════════════════════ */
 document.getElementById("biz-btn-voucher").addEventListener("click",()=>{
-  const rows=[VOUCHER_HEADERS];
+  const HEADERS=["年度","傳票號碼","傳票種類","日期","科目代號","客戶供應商代號","借/貸","金額","長摘要"];
+  const rows=[HEADERS];
   bizState.matched.forEach(item=>{
     const s=item.source;
     const acct=ACCOUNTS[s.acctKey];
     if(!acct.lines.length)return;
     const summary=acct.buildSummary({address:s.address,fullAddr:s.fullAddr,tenantOrOwner:s.tenantOrOwner});
+    const rocYear=toRoc(s.dateKey).year;
     acct.lines.forEach(line=>{
-      const row=new Array(VOUCHER_HEADERS.length).fill(null);
-      row[0]=toRoc(s.dateKey).year; row[1]="DEFAULT"; row[2]=3;
-      row[3]=s.rocStr; row[9]=line.code;
-      row[12]=line.dc; row[13]=computeAmt(line.amountType,s.amount);
-      row[22]=summary;
-      rows.push(row);
+      rows.push([
+        rocYear,"DEFAULT",3,s.rocStr,
+        line.code,"",
+        line.dc,computeAmt(line.amountType,s.amount),
+        summary,
+      ]);
     });
   });
   const ws=XLSX.utils.aoa_to_sheet(rows);
+  ws["!cols"]=[{wch:8},{wch:12},{wch:10},{wch:14},{wch:14},{wch:16},{wch:6},{wch:10},{wch:50}];
   const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,"傳票累積檔");
   XLSX.writeFile(wb,"傳票匯入_業務處_"+new Date().toISOString().slice(0,10)+".xlsx");
