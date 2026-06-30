@@ -241,8 +241,9 @@ button.btn.ghost:hover{background:var(--accent-soft);}
 <!-- 部門 Tab -->
 <div class="tabs">
   <button class="tab active" data-tab="fang">🏠 房管處</button>
+  <button class="tab" data-tab="fang-invoice">🧾 房管處電子發票</button>
   <button class="tab" data-tab="biz">💼 業務處</button>
-  <button class="tab" data-tab="invoice">🧾 電子發票</button>
+  <button class="tab" data-tab="invoice">🧾 電子發票（舊）</button>
 </div>
 
 <!-- ══════════════════════════════════════════
@@ -392,6 +393,52 @@ button.btn.ghost:hover{background:var(--accent-soft);}
   </div>
 </div><!-- /panel-fang -->
 
+<!-- 房管處電子發票獨立區塊 -->
+<div class="panel" id="panel-fang-invoice" style="display:none;">
+  <div style="margin-bottom:16px;">
+    <div style="font-size:13px;color:var(--ink-soft);">
+      上傳房管處電子發票，自動判斷類型（修繕費／代管費／服務費）產出傳票匯入檔
+    </div>
+  </div>
+  <div class="card">
+    <div style="padding:16px 18px;border-bottom:1px solid var(--border);">
+      <div class="upload-row" style="grid-template-columns:1fr 1fr;">
+        <div>
+          <div class="dropzone" id="fang-inv-dz">
+            <div class="dz-icon">🧾</div>
+            <div class="dz-label">上傳房管處電子發票</div>
+            <div class="dz-hint">電子發票開立_XXXX.xlsx</div>
+          </div>
+          <input type="file" id="fang-inv-file" accept=".xlsx" hidden>
+        </div>
+        <div style="display:flex;align-items:center;padding:0 12px;">
+          <div id="fang-inv-status" style="font-size:13px;color:var(--ink-soft);">
+            上傳後自動判斷類型並預覽
+          </div>
+        </div>
+      </div>
+      <div class="errbox" id="fang-inv-err"></div>
+    </div>
+    <div class="tbl-wrap" id="fang-inv-preview" hidden>
+      <table>
+        <thead><tr>
+          <th>#</th><th>發票號碼</th><th>案件名稱</th>
+          <th>類型</th><th>發票日期</th>
+          <th class="right">未稅</th><th class="right">稅額</th><th class="right">含稅</th>
+        </tr></thead>
+        <tbody id="fang-inv-tb"></tbody>
+      </table>
+    </div>
+    <div class="actbar">
+      <div class="bal" id="fang-inv-bal">—</div>
+      <div class="btns">
+        <button class="btn secondary" id="fang-inv-reset">清除</button>
+        <button class="btn primary" id="fang-inv-download" disabled>下載傳票匯入檔</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 
 <!-- ══════════════════════════════════════════
      業務處 Panel
@@ -489,6 +536,73 @@ button.btn.ghost:hover{background:var(--accent-soft);}
       </div>
     </div>
   </div>
+
+  <!-- 業務處電子發票區塊（分隔線以下） -->
+  <div style="margin-top:28px;padding-top:20px;border-top:2px solid var(--border);">
+    <div style="font-size:14px;font-weight:700;margin-bottom:14px;">
+      💼 業務處電子發票 → 傳票匯入
+    </div>
+    <div style="font-size:13px;color:var(--ink-soft);margin-bottom:14px;">
+      上傳業務處金流表＋電子發票，比對後產出標示發票的金流表及傳票匯入檔
+    </div>
+    <div class="upload-row" style="grid-template-columns:1fr 1fr;">
+      <div>
+        <div class="dropzone" id="biz-inv-dz-cashflow">
+          <div class="dz-icon">📊</div>
+          <div class="dz-label">上傳業務處金流表</div>
+          <div class="dz-hint">業務處金流表.xlsx</div>
+        </div>
+        <input type="file" id="biz-inv-file-cashflow" accept=".xlsx" hidden>
+      </div>
+      <div>
+        <div class="dropzone" id="biz-inv-dz-invoice">
+          <div class="dz-icon">🧾</div>
+          <div class="dz-label">上傳業務處電子發票</div>
+          <div class="dz-hint">成交資訊-發票資訊-子表.xlsx</div>
+        </div>
+        <input type="file" id="biz-inv-file-invoice" accept=".xlsx" hidden>
+      </div>
+    </div>
+    <div class="errbox" id="biz-inv-err"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px;">
+      <button class="btn primary" id="biz-inv-btn-match" disabled>開始比對</button>
+    </div>
+
+    <!-- 比對結果 -->
+    <div id="biz-inv-result" hidden style="margin-top:16px;">
+      <div class="card">
+        <div class="match-summary">
+          <div class="ms-cell ok">
+            <div class="ms-num" id="biz-inv-cnt-matched">0</div>
+            <div class="ms-lbl">✓ 比對成功</div>
+          </div>
+          <div class="ms-cell warn">
+            <div class="ms-num" id="biz-inv-cnt-unmatched">0</div>
+            <div class="ms-lbl">⚠ 未比對到</div>
+          </div>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr>
+              <th>#</th><th>金流表說明</th><th class="right">金額</th>
+              <th>發票號碼</th><th>買受人</th>
+              <th class="right">未稅</th><th class="right">稅額</th><th>狀態</th>
+            </tr></thead>
+            <tbody id="biz-inv-tb"></tbody>
+          </table>
+        </div>
+        <div class="actbar">
+          <div class="bal" id="biz-inv-bal">—</div>
+          <div class="btns">
+            <button class="btn secondary" id="biz-inv-btn-reset">重新上傳</button>
+            <button class="btn primary" id="biz-inv-btn-cashflow" disabled>下載金流表</button>
+            <button class="btn primary" id="biz-inv-btn-voucher" disabled>下載傳票匯入檔</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </div><!-- /panel-biz -->
 
 <!-- ══════════════════════════════════════════
@@ -1038,9 +1152,17 @@ let bizState={bank:null,ragic:null,matched:[],unmatched:[],bankOnly:[]};
 document.querySelectorAll(".tab").forEach(tab=>{
   tab.addEventListener("click",()=>{
     document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
-    document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
+    document.querySelectorAll(".panel").forEach(p=>{
+      p.classList.remove("active");
+      p.style.display="none";
+    });
     tab.classList.add("active");
-    document.getElementById("panel-"+tab.dataset.tab).classList.add("active");
+    const panelId="panel-"+tab.dataset.tab;
+    const panel=document.getElementById(panelId);
+    if(panel){
+      panel.classList.add("active");
+      panel.style.display="block";
+    }
   });
 });
 
@@ -1905,8 +2027,388 @@ document.getElementById("biz-btn-cashflow").addEventListener("click",()=>{
 });
 
 /* ══════════════════════════════════════
-   電子發票 Tab 邏輯
+   業務處電子發票邏輯
 ══════════════════════════════════════ */
+
+// 解析業務處電子發票
+function parseBizInvoiceXlsx(data){
+  const wb=XLSX.read(data,{type:"array"});
+  const ws=wb.Sheets[wb.SheetNames[0]];
+  const aoa=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null});
+  const hi=aoa.findIndex(r=>r.some(c=>c==="發票號碼"));
+  if(hi===-1)throw new Error("找不到「發票號碼」欄位");
+  const headers=aoa[hi];
+  const col=n=>headers.indexOf(n);
+  return aoa.slice(hi+1).filter(r=>r[col("發票號碼")]!=null).map(r=>{
+    let rocDateStr="";
+    try{ rocDateStr=toRoc(r[col("發票日期")]).str; }catch(e){}
+    const rocYear=rocDateStr?parseInt(rocDateStr.split("/")[0]):115;
+    return{
+      invoiceNo:String(r[col("發票號碼")]).trim(),
+      caseAddr:String(r[col("案件地址")]||"").trim(),
+      buyerName:String(r[col("買受人名稱")]||"").trim(),
+      untaxed:Math.round(Number(r[col("服務費金額(未稅)")])||0),
+      tax:Math.round(Number(r[col("稅額")])||0),
+      total:Number(r[col("服務費金額(含稅)")])||0,
+      rocDateStr, rocYear,
+    };
+  });
+}
+
+// 解析業務處金流表
+function parseBizCashflowXlsx(data){
+  const wb=XLSX.read(data,{type:"array"});
+  const ws=wb.Sheets[wb.SheetNames[0]];
+  const aoa=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null});
+  const rows=[];
+  let currentDate="";
+  for(const r of aoa){
+    const dateCell=r[0]?String(r[0]).trim():"";
+    if(dateCell&&/\d+月\d+日/.test(dateCell)) currentDate=dateCell;
+    const desc=r[1]?String(r[1]).replace(/[\r\n]+/g," ").trim():"";
+    const income=r[3]?Number(r[3]):null;
+    if(!desc||!income||isNaN(income)||income<=0) continue;
+    if(desc==="說明") continue;
+    // 抓發票號碼（BR/ZZ/ZX 開頭）
+    const invNos=[];
+    const invMatches=desc.matchAll(/([BZ][RZX]\d+)/g);
+    for(const m of invMatches) invNos.push(m[1]);
+    rows.push({date:currentDate, desc, amount:income, invNos, raw:r});
+  }
+  return rows;
+}
+
+// 比對：案件地址＋金額(含稅)
+function reconcileBizInvoice(cashflowRows, invoices){
+  const invUsed=new Set();
+  const matched=[];
+  const unmatched=[];
+
+  // 只處理含「服務費」且有發票號碼的金流表列
+  const serviceRows=cashflowRows.filter(r=>
+    r.desc.includes("服務費")&&r.invNos.length>0);
+
+  for(const cfRow of serviceRows){
+    // 找對應的發票（案件地址出現在說明欄開頭 ＋ 金額相符）
+    const matchedInvs=[];
+    for(let i=0;i<invoices.length;i++){
+      if(invUsed.has(i)) continue;
+      const inv=invoices[i];
+      const addrMatch=cfRow.desc.startsWith(inv.caseAddr)||
+        inv.caseAddr.length>5&&cfRow.desc.includes(inv.caseAddr.slice(0,20));
+      const amtMatch=Math.abs(inv.total-cfRow.amount)<1||
+        cfRow.invNos.includes(inv.invoiceNo);
+      if(addrMatch&&amtMatch){
+        matchedInvs.push({idx:i,inv});
+      }
+    }
+    // 兩個發票的情況：金額加總等於金流表金額
+    if(matchedInvs.length===0){
+      // 嘗試找兩筆加總
+      const candidates=invoices
+        .map((inv,i)=>({idx:i,inv}))
+        .filter(({idx,inv})=>!invUsed.has(idx)&&
+          (cfRow.desc.includes(inv.caseAddr.slice(0,15))||
+           cfRow.invNos.includes(inv.invoiceNo)));
+      if(candidates.length>=2){
+        for(let a=0;a<candidates.length;a++){
+          for(let b=a+1;b<candidates.length;b++){
+            const sum=candidates[a].inv.total+candidates[b].inv.total;
+            if(Math.abs(sum-cfRow.amount)<1){
+              invUsed.add(candidates[a].idx);
+              invUsed.add(candidates[b].idx);
+              matched.push({cfRow,invs:[candidates[a].inv,candidates[b].inv]});
+              goto_next:; break;
+            }
+          }
+          if(matched[matched.length-1]?.cfRow===cfRow) break;
+        }
+      }
+      if(!matched.length||matched[matched.length-1]?.cfRow!==cfRow){
+        unmatched.push(cfRow);
+      }
+    }else{
+      matchedInvs.forEach(({idx})=>invUsed.add(idx));
+      matched.push({cfRow,invs:matchedInvs.map(m=>m.inv)});
+    }
+  }
+  return{matched,unmatched};
+}
+
+let bizInvState={cashflow:null,invoices:null,matched:[],unmatched:[]};
+
+bindDropzone("biz-inv-dz-cashflow","biz-inv-file-cashflow",async(file,dz)=>{
+  try{
+    const data=await readFile(file);
+    bizInvState.cashflow=parseBizCashflowXlsx(data);
+    dz.classList.add("loaded");
+    dz.querySelector(".dz-label").textContent="✓ "+file.name;
+  }catch(e){showErr("biz-inv-err",e.message);}
+  updateBizInvMatchBtn();
+});
+
+bindDropzone("biz-inv-dz-invoice","biz-inv-file-invoice",async(file,dz)=>{
+  try{
+    const data=await readFile(file);
+    bizInvState.invoices=parseBizInvoiceXlsx(data);
+    dz.classList.add("loaded");
+    dz.querySelector(".dz-label").textContent="✓ "+file.name;
+  }catch(e){showErr("biz-inv-err",e.message);}
+  updateBizInvMatchBtn();
+});
+
+function updateBizInvMatchBtn(){
+  document.getElementById("biz-inv-btn-match").disabled=
+    !(bizInvState.cashflow&&bizInvState.invoices);
+}
+
+document.getElementById("biz-inv-btn-match").addEventListener("click",()=>{
+  clearErr("biz-inv-err");
+  const res=reconcileBizInvoice(bizInvState.cashflow,bizInvState.invoices);
+  bizInvState.matched=res.matched;
+  bizInvState.unmatched=res.unmatched;
+  renderBizInvResult();
+});
+
+document.getElementById("biz-inv-btn-reset").addEventListener("click",()=>{
+  bizInvState={cashflow:null,invoices:null,matched:[],unmatched:[]};
+  ["biz-inv-dz-cashflow","biz-inv-dz-invoice"].forEach(id=>{
+    const dz=document.getElementById(id);
+    dz.classList.remove("loaded");
+    dz.querySelector(".dz-label").textContent=
+      id.includes("cashflow")?"上傳業務處金流表":"上傳業務處電子發票";
+  });
+  ["biz-inv-file-cashflow","biz-inv-file-invoice"].forEach(id=>{
+    document.getElementById(id).value="";
+  });
+  document.getElementById("biz-inv-result").hidden=true;
+  document.getElementById("biz-inv-btn-match").disabled=true;
+});
+
+function renderBizInvResult(){
+  document.getElementById("biz-inv-result").hidden=false;
+  const{matched,unmatched}=bizInvState;
+  document.getElementById("biz-inv-cnt-matched").textContent=matched.length;
+  document.getElementById("biz-inv-cnt-unmatched").textContent=unmatched.length;
+
+  const tb=document.getElementById("biz-inv-tb");
+  tb.innerHTML="";
+  matched.forEach((item,i)=>{
+    const{cfRow,invs}=item;
+    const invNosStr=invs.map(inv=>inv.invoiceNo).join("、");
+    const buyersStr=invs.map(inv=>inv.buyerName).join("、");
+    const totalUntax=invs.reduce((s,inv)=>s+inv.untaxed,0);
+    const totalTax=invs.reduce((s,inv)=>s+inv.tax,0);
+    const tr=document.createElement("tr");
+    tr.className="matched";
+    tr.innerHTML=`
+      <td>${i+1}</td>
+      <td style="max-width:220px;white-space:normal;">${cfRow.desc}</td>
+      <td class="mono right">${fmtMoney(cfRow.amount)}</td>
+      <td class="mono">${invNosStr}</td>
+      <td>${buyersStr}</td>
+      <td class="mono right">${fmtMoney(totalUntax)}</td>
+      <td class="mono right">${fmtMoney(totalTax)}</td>
+      <td><span class="tag ok">✓ 比對成功</span></td>
+    `;
+    tb.appendChild(tr);
+  });
+  unmatched.forEach((cfRow,i)=>{
+    const tr=document.createElement("tr");
+    tr.className="unmatched";
+    tr.innerHTML=`
+      <td>${matched.length+i+1}</td>
+      <td style="max-width:220px;white-space:normal;">${cfRow.desc}</td>
+      <td class="mono right">${fmtMoney(cfRow.amount)}</td>
+      <td colspan="3" style="color:var(--ink-faint);">—</td>
+      <td></td>
+      <td><span class="tag warn">未比對到發票</span></td>
+    `;
+    tb.appendChild(tr);
+  });
+
+  const totalAmt=matched.reduce((s,m)=>s+m.cfRow.amount,0);
+  const totalUntax=matched.reduce((s,m)=>s+m.invs.reduce((a,inv)=>a+inv.untaxed,0),0);
+  const totalTax=matched.reduce((s,m)=>s+m.invs.reduce((a,inv)=>a+inv.tax,0),0);
+  document.getElementById("biz-inv-bal").innerHTML=
+    `比對成功 ${matched.length} 筆｜金額 ${fmtMoney(totalAmt)}｜未稅 ${fmtMoney(totalUntax)}｜稅額 ${fmtMoney(totalTax)}`;
+
+  document.getElementById("biz-inv-btn-cashflow").disabled=matched.length===0;
+  document.getElementById("biz-inv-btn-voucher").disabled=matched.length===0;
+}
+
+// 下載金流表（標示發票號碼版）
+document.getElementById("biz-inv-btn-cashflow").addEventListener("click",()=>{
+  const cf=bizInvState.cashflow;
+  if(!cf) return;
+  // 建立已比對的金流表列 → invNos 對應表
+  const matchMap=new Map();
+  bizInvState.matched.forEach(item=>{
+    matchMap.set(item.cfRow,item.invs);
+  });
+
+  // 重建金流表格式
+  const aoa=[];
+  aoa.push(["115年","國泰世華/仁愛分行 #57668 - 銀存明細  業務處",null,null,null,null,null]);
+  aoa.push(["日期",null,"說明","收入","支出","匯費","餘額"]);
+  let lastDate="";
+  cf.forEach(row=>{
+    const dateCell=row.date===lastDate?null:row.date;
+    const invs=matchMap.get(row);
+    let desc=row.desc;
+    // 如果有比對到發票，說明欄維持原樣（已有發票號碼）
+    aoa.push([dateCell,desc,null,row.amount,null,null,null]);
+    lastDate=row.date;
+  });
+  const ws=XLSX.utils.aoa_to_sheet(aoa);
+  ws["!cols"]=[{wch:10},{wch:60},{wch:12},{wch:12},{wch:10},{wch:8},{wch:12}];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,"業務處金流表");
+  XLSX.writeFile(wb,"金流表_業務處_"+new Date().toISOString().slice(0,10)+".xlsx");
+});
+
+// 下載傳票匯入檔
+document.getElementById("biz-inv-btn-voucher").addEventListener("click",()=>{
+  const HEADERS=["年度","傳票號碼","傳票種類","日期","科目代號","客戶供應商代號","借/貸","金額","長摘要"];
+  const rows=[HEADERS];
+
+  bizInvState.matched.forEach(item=>{
+    const{cfRow,invs}=item;
+    const addr=invs[0].caseAddr||cfRow.desc.split("-")[0];
+    const rocYear=invs[0].rocYear||115;
+    const dateStr=invs[0].rocDateStr||cfRow.date||"";
+    // 第一列：借方 1110-02 全額
+    const buyersDesc=invs.map(inv=>`${inv.buyerName}-服務費`).join("+");
+    rows.push([rocYear,"DEFAULT",3,dateStr,"1110-02","",1,cfRow.amount,
+      `${addr}-${buyersDesc}`]);
+    // 每張發票兩列貸方
+    invs.forEach(inv=>{
+      const s1=`${inv.caseAddr}-${inv.buyerName}-服務費`;
+      const s2=`${inv.caseAddr}-${inv.buyerName}-服務費-${inv.invoiceNo}`;
+      rows.push([rocYear,"DEFAULT",3,inv.rocDateStr,"4101-03","",2,inv.untaxed,s1]);
+      rows.push([rocYear,"DEFAULT",3,inv.rocDateStr,"2290","",2,inv.tax,s2]);
+    });
+  });
+
+  const ws=XLSX.utils.aoa_to_sheet(rows);
+  ws["!cols"]=[{wch:8},{wch:12},{wch:10},{wch:14},{wch:14},{wch:16},{wch:6},{wch:10},{wch:50}];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,"傳票累積檔");
+  XLSX.writeFile(wb,"傳票匯入_業務處電子發票_"+new Date().toISOString().slice(0,10)+".xlsx");
+});
+function parseFangInvoiceXlsx(data){
+  const wb=XLSX.read(data,{type:"array"});
+  const ws=wb.Sheets[wb.SheetNames[0]];
+  const aoa=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null});
+  const hi=aoa.findIndex(r=>r.some(c=>c==="發票號碼"));
+  if(hi===-1)throw new Error("找不到「發票號碼」欄位");
+  const headers=aoa[hi];
+  const col=n=>headers.indexOf(n);
+  return aoa.slice(hi+1).filter(r=>r[col("發票號碼")]!=null).map(r=>{
+    const note=r[col("發票備註")]?String(r[col("發票備註")]).trim():"";
+    const brandName=r[col("發票品名(首欄)")]?String(r[col("發票品名(首欄)")]).trim():"";
+    const caseName=r[col("合約案件名稱")]?String(r[col("合約案件名稱")]).trim():"";
+    // 判斷類型
+    let type="服務費";
+    if(brandName.includes("修繕費")||note.includes("修繕費")) type="修繕費";
+    else if(brandName.includes("代管費")||note.includes("代管費")) type="代管費";
+    // 從備註抓年月（例如 八德106/11506修繕費/648/32）
+    const parts=note.split("/");
+    const ymMatch=parts.length>1?parts[1].match(/(\d{3,5})/):null;
+    const yearMonth=ymMatch?ymMatch[1]:"";
+    // 日期
+    let rocDateStr="";
+    try{ rocDateStr=toRoc(r[col("發票日期")]).str; }catch(e){}
+    const rocYear=rocDateStr?parseInt(rocDateStr.split("/")[0]):115;
+    // 客供商代號
+    const houseMatch=matchHousing(caseName);
+    const custCode=houseMatch?houseMatch.code:caseName;
+    return{
+      invoiceNo:String(r[col("發票號碼")]).trim(),
+      caseName, yearMonth, rocDateStr, rocYear, custCode, type,
+      untaxed:Math.round(Number(r[col("小計（未稅）")])||0),
+      tax:Math.round(Number(r[col("營業稅")])||0),
+      total:Number(r[col("總金額")])||0,
+    };
+  });
+}
+
+function fangInvoiceAcctCode(type){
+  if(type==="代管費") return "4101-02";
+  if(type==="修繕費") return "4101-023";
+  return "4101-022";
+}
+
+let fangInvState={invoices:[]};
+
+bindDropzone("fang-inv-dz","fang-inv-file",async(file,dz)=>{
+  try{
+    const data=await readFile(file);
+    fangInvState.invoices=parseFangInvoiceXlsx(data);
+    dz.classList.add("loaded");
+    dz.querySelector(".dz-label").textContent="✓ "+file.name;
+    renderFangInvPreview();
+    document.getElementById("fang-inv-download").disabled=false;
+  }catch(e){ showErr("fang-inv-err",e.message); }
+});
+
+function renderFangInvPreview(){
+  const invs=fangInvState.invoices;
+  document.getElementById("fang-inv-preview").hidden=false;
+  const tb=document.getElementById("fang-inv-tb");
+  tb.innerHTML="";
+  invs.forEach((inv,i)=>{
+    const tagCls=inv.type==="服務費"?"ok":inv.type==="代管費"?"blue":"grey";
+    const tr=document.createElement("tr");
+    tr.innerHTML=`
+      <td>${i+1}</td>
+      <td class="mono">${inv.invoiceNo}</td>
+      <td>${inv.caseName}</td>
+      <td><span class="tag ${tagCls}">${inv.type}</span></td>
+      <td class="mono">${inv.rocDateStr}</td>
+      <td class="mono right">${fmtMoney(inv.untaxed)}</td>
+      <td class="mono right">${fmtMoney(inv.tax)}</td>
+      <td class="mono right">${fmtMoney(inv.total)}</td>
+    `;
+    tb.appendChild(tr);
+  });
+  const tUntax=invs.reduce((s,i)=>s+i.untaxed,0);
+  const tTax=invs.reduce((s,i)=>s+i.tax,0);
+  const tTotal=invs.reduce((s,i)=>s+i.total,0);
+  document.getElementById("fang-inv-bal").innerHTML=
+    `共 ${invs.length} 張｜未稅 ${fmtMoney(tUntax)}｜稅額 ${fmtMoney(tTax)}｜含稅 ${fmtMoney(tTotal)}`;
+}
+
+document.getElementById("fang-inv-reset").addEventListener("click",()=>{
+  fangInvState={invoices:[]};
+  const dz=document.getElementById("fang-inv-dz");
+  dz.classList.remove("loaded");
+  dz.querySelector(".dz-label").textContent="上傳房管處電子發票";
+  document.getElementById("fang-inv-file").value="";
+  document.getElementById("fang-inv-preview").hidden=true;
+  document.getElementById("fang-inv-download").disabled=true;
+  document.getElementById("fang-inv-bal").textContent="—";
+  document.getElementById("fang-inv-status").textContent="上傳後自動判斷類型並預覽";
+  clearErr("fang-inv-err");
+});
+
+document.getElementById("fang-inv-download").addEventListener("click",()=>{
+  const HEADERS=["年度","傳票號碼","傳票種類","日期","科目代號","客戶供應商代號","借/貸","金額","長摘要"];
+  const rows=[HEADERS];
+  fangInvState.invoices.forEach(inv=>{
+    const s1=`${inv.caseName}-${inv.yearMonth}-${inv.type}`;
+    const s2=`${inv.caseName}-${inv.yearMonth}-${inv.type}-${inv.invoiceNo}`;
+    rows.push([inv.rocYear,"DEFAULT",3,inv.rocDateStr,
+      fangInvoiceAcctCode(inv.type),inv.custCode,2,inv.untaxed,s1]);
+    rows.push([inv.rocYear,"DEFAULT",3,inv.rocDateStr,
+      "2290",inv.custCode,2,inv.tax,s2]);
+  });
+  const ws=XLSX.utils.aoa_to_sheet(rows);
+  ws["!cols"]=[{wch:8},{wch:12},{wch:10},{wch:14},{wch:14},{wch:16},{wch:6},{wch:10},{wch:40}];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,"傳票累積檔");
+  XLSX.writeFile(wb,"傳票匯入_房管處電子發票_"+new Date().toISOString().slice(0,10)+".xlsx");
+});
 
 // 解析房管處電子發票
 function parseInvoiceXlsx(data){
