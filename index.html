@@ -391,48 +391,111 @@ button.btn.ghost:hover{background:var(--accent-soft);}
 
   </div><!-- /fang-result -->
 
-  <!-- 房管處電子發票區塊（獨立於比對結果之外，隨時可用）-->
+  <!-- ── 第二次：請款支出傳票（UI 預留，程式後補）── -->
   <div style="margin-top:28px;padding-top:20px;border-top:2px solid var(--border);">
-    <div style="font-size:14px;font-weight:700;margin-bottom:14px;">
-      🧾 房管處電子發票 → 傳票匯入
+    <div style="font-size:14px;font-weight:700;margin-bottom:6px;">
+      📤 第二次：請款支出傳票
     </div>
     <div style="font-size:13px;color:var(--ink-soft);margin-bottom:14px;">
-      上傳房管處電子發票，自動判斷類型（修繕費／代管費／服務費）產出傳票匯入檔
+      上傳請款單，產出金流表及支出傳票匯入檔
     </div>
     <div class="card">
       <div style="padding:16px 18px;border-bottom:1px solid var(--border);">
         <div class="upload-row" style="grid-template-columns:1fr 1fr;">
           <div>
-            <div class="dropzone" id="fang-inv-dz">
-              <div class="dz-icon">🧾</div>
-              <div class="dz-label">上傳房管處電子發票</div>
-              <div class="dz-hint">電子發票開立_XXXX.xlsx</div>
+            <div class="dropzone" id="fang-pay-dz" style="opacity:0.5;cursor:not-allowed;">
+              <div class="dz-icon">📋</div>
+              <div class="dz-label">上傳請款單</div>
+              <div class="dz-hint">功能開發中</div>
             </div>
-            <input type="file" id="fang-inv-file" accept=".xlsx" hidden>
           </div>
           <div style="display:flex;align-items:center;padding:0 12px;">
-            <div id="fang-inv-status" style="font-size:13px;color:var(--ink-soft);">
-              上傳後自動判斷類型並預覽
+            <div style="font-size:13px;color:var(--ink-faint);">
+              🚧 此功能建置中，敬請期待
             </div>
           </div>
         </div>
-        <div class="errbox" id="fang-inv-err"></div>
-      </div>
-      <div class="tbl-wrap" id="fang-inv-preview" hidden>
-        <table>
-          <thead><tr>
-            <th>#</th><th>發票號碼</th><th>案件名稱</th>
-            <th>類型</th><th>發票日期</th>
-            <th class="right">未稅</th><th class="right">稅額</th><th class="right">含稅</th>
-          </tr></thead>
-          <tbody id="fang-inv-tb"></tbody>
-        </table>
       </div>
       <div class="actbar">
-        <div class="bal" id="fang-inv-bal">—</div>
+        <div></div>
         <div class="btns">
-          <button class="btn secondary" id="fang-inv-reset">清除</button>
-          <button class="btn primary" id="fang-inv-download" disabled>下載傳票匯入檔</button>
+          <button class="btn primary" disabled>下載金流表</button>
+          <button class="btn primary" disabled>下載支出傳票匯入檔</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 第三次：沖帳傳票（整合電子發票）── -->
+  <div style="margin-top:28px;padding-top:20px;border-top:2px solid var(--border);">
+    <div style="font-size:14px;font-weight:700;margin-bottom:6px;">
+      🔄 第三次：沖帳傳票
+    </div>
+    <div style="font-size:13px;color:var(--ink-soft);margin-bottom:14px;">
+      上傳金流表＋收入傳票＋支出傳票＋電子發票，產出最終沖帳傳票匯入檔
+    </div>
+    <div class="card">
+      <div style="padding:16px 18px;border-bottom:1px solid var(--border);">
+        <div class="upload-row" style="grid-template-columns:1fr 1fr;">
+          <div>
+            <div class="dropzone" id="fang-3rd-dz-cashflow">
+              <div class="dz-icon">📊</div>
+              <div class="dz-label">上傳金流表</div>
+              <div class="dz-hint">金流表_房管處_YYYY-MM-DD.xlsx</div>
+            </div>
+            <input type="file" id="fang-3rd-file-cashflow" accept=".xlsx" hidden>
+          </div>
+          <div>
+            <div class="dropzone" id="fang-3rd-dz-income">
+              <div class="dz-icon">📥</div>
+              <div class="dz-label">上傳收入傳票檔</div>
+              <div class="dz-hint">傳票匯入_房管處_YYYY-MM-DD.xlsx</div>
+            </div>
+            <input type="file" id="fang-3rd-file-income" accept=".xlsx" hidden>
+          </div>
+        </div>
+        <div class="upload-row" style="grid-template-columns:1fr 1fr;margin-top:12px;">
+          <div>
+            <div class="dropzone" id="fang-3rd-dz-expense">
+              <div class="dz-icon">📤</div>
+              <div class="dz-label">上傳支出傳票檔</div>
+              <div class="dz-hint">傳票匯入_支出_YYYY-MM-DD.xlsx（選填）</div>
+            </div>
+            <input type="file" id="fang-3rd-file-expense" accept=".xlsx" hidden>
+          </div>
+          <div>
+            <div class="dropzone" id="fang-3rd-dz-invoice">
+              <div class="dz-icon">🧾</div>
+              <div class="dz-label">上傳電子發票</div>
+              <div class="dz-hint">電子發票開立_XXXX.xlsx（選填）</div>
+            </div>
+            <input type="file" id="fang-3rd-file-invoice" accept=".xlsx" hidden>
+          </div>
+        </div>
+        <div class="errbox" id="fang-3rd-err"></div>
+        <div style="display:flex;justify-content:flex-end;margin-top:8px;">
+          <button class="btn primary" id="fang-3rd-btn-match" disabled>開始比對</button>
+        </div>
+      </div>
+
+      <!-- 比對結果預覽 -->
+      <div id="fang-3rd-result" hidden>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr>
+              <th>#</th><th>房源</th><th>屋主支出</th>
+              <th>收入傳票筆數</th><th>支出傳票筆數</th><th>電子發票</th><th>狀態</th>
+            </tr></thead>
+            <tbody id="fang-3rd-tb"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="actbar">
+        <div class="bal" id="fang-3rd-bal">—</div>
+        <div class="btns">
+          <button class="btn secondary" id="fang-3rd-btn-reset">重新上傳</button>
+          <button class="btn primary" id="fang-3rd-btn-download" disabled>下載沖帳傳票匯入檔</button>
         </div>
       </div>
     </div>
@@ -2042,6 +2105,194 @@ document.getElementById("biz-btn-cashflow").addEventListener("click",()=>{
   ws["!cols"]=[{wch:12},{wch:50},{wch:12},{wch:12},{wch:10},{wch:8},{wch:12}];
   XLSX.utils.book_append_sheet(wb,ws,"業務處金流表");
   XLSX.writeFile(wb,"金流表_業務處_"+new Date().toISOString().slice(0,10)+".xlsx");
+});
+
+/* ══════════════════════════════════════
+   第三次沖帳傳票邏輯
+══════════════════════════════════════ */
+
+// 解析傳票檔（9欄格式）
+function parseVoucherXlsx(data){
+  const wb=XLSX.read(data,{type:"array"});
+  const ws=wb.Sheets[wb.SheetNames[0]];
+  const aoa=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null});
+  const hi=aoa.findIndex(r=>r&&r[0]==="年度");
+  if(hi===-1)throw new Error("找不到傳票檔格式，請確認是9欄傳票匯入檔");
+  return aoa.slice(hi+1).filter(r=>r[4]).map(r=>({
+    rocYear:r[0], date:String(r[3]||""),
+    acctCode:String(r[4]||"").trim(),
+    custCode:String(r[5]||"").trim(),
+    dc:Number(r[6]),
+    amount:Number(r[7])||0,
+    summary:String(r[8]||"").trim(),
+  }));
+}
+
+// 解析金流表找屋主支出列
+function parseCashflowForThird(data){
+  const wb=XLSX.read(data,{type:"array"});
+  const ws=wb.Sheets[wb.SheetNames[0]];
+  const aoa=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null});
+  const rows=[];
+  let currentDate="";
+  for(const r of aoa){
+    const dateCell=r[0]?String(r[0]).replace(/\s*★\s*/g,"").trim():"";
+    if(dateCell&&/\d+月\d+日/.test(dateCell)) currentDate=dateCell;
+    const desc=r[1]?String(r[1]).replace(/[\r\n]+/g," ").trim():"";
+    const expense=r[4]?Number(r[4]):null;
+    if(!desc||!expense||isNaN(expense)||expense<=0) continue;
+    if(desc==="說明") continue;
+    if(desc.includes("屋主")&&desc.includes("租金")){
+      const houseName=desc.split("-")[0].trim();
+      const houseMatch=matchHousing(houseName);
+      rows.push({
+        date:currentDate, desc, expense,
+        houseName, houseMatch,
+        code:houseMatch?houseMatch.code:houseName,
+      });
+    }
+  }
+  return rows;
+}
+
+let fang3rdState={
+  cashflow:null, income:null, expense:null, invoice:null,
+  results:[]
+};
+
+["cashflow","income","expense","invoice"].forEach(key=>{
+  bindDropzone(`fang-3rd-dz-${key}`,`fang-3rd-file-${key}`,async(file,dz)=>{
+    try{
+      const data=await readFile(file);
+      if(key==="cashflow") fang3rdState.cashflow=parseCashflowForThird(data);
+      else if(key==="income") fang3rdState.income=parseVoucherXlsx(data);
+      else if(key==="expense") fang3rdState.expense=parseVoucherXlsx(data);
+      else if(key==="invoice") fang3rdState.invoice=parseFangInvoiceXlsx(data);
+      dz.classList.add("loaded");
+      dz.querySelector(".dz-label").textContent="✓ "+file.name;
+    }catch(e){ showErr("fang-3rd-err",e.message); }
+    updateFang3rdMatchBtn();
+  });
+});
+
+function updateFang3rdMatchBtn(){
+  document.getElementById("fang-3rd-btn-match").disabled=
+    !(fang3rdState.cashflow&&fang3rdState.income);
+}
+
+document.getElementById("fang-3rd-btn-match").addEventListener("click",()=>{
+  clearErr("fang-3rd-err");
+  const results=[];
+
+  fang3rdState.cashflow.forEach(cfRow=>{
+    const houseName=cfRow.houseName;
+    const code=cfRow.code;
+
+    // 收入傳票：找同房源的貸方分錄（dc=2）
+    const incomeLines=(fang3rdState.income||[]).filter(r=>
+      r.summary.includes(houseName)&&r.dc===2);
+
+    // 支出傳票：找同房源的借方分錄（dc=1）
+    const expenseLines=(fang3rdState.expense||[]).filter(r=>
+      r.summary.includes(houseName)&&r.dc===1);
+
+    // 電子發票：找同房源
+    const invoices=(fang3rdState.invoice||[]).filter(inv=>{
+      const m=matchHousing(inv.caseName);
+      return m&&m.code===code;
+    });
+
+    results.push({cfRow, incomeLines, expenseLines, invoices});
+  });
+
+  fang3rdState.results=results;
+  renderFang3rdResult();
+});
+
+function renderFang3rdResult(){
+  document.getElementById("fang-3rd-result").hidden=false;
+  const tb=document.getElementById("fang-3rd-tb");
+  tb.innerHTML="";
+  fang3rdState.results.forEach((item,i)=>{
+    const{cfRow,incomeLines,expenseLines,invoices}=item;
+    const hasIncome=incomeLines.length>0;
+    const tr=document.createElement("tr");
+    tr.className=hasIncome?"matched":"unmatched";
+    tr.innerHTML=`
+      <td>${i+1}</td>
+      <td>${cfRow.houseName}</td>
+      <td class="mono right">${fmtMoney(cfRow.expense)}</td>
+      <td><span class="tag ${hasIncome?"ok":"warn"}">${incomeLines.length} 筆</span></td>
+      <td><span class="tag ${expenseLines.length>0?"blue":"grey"}">${expenseLines.length} 筆</span></td>
+      <td><span class="tag ${invoices.length>0?"ok":"grey"}">${invoices.length} 張</span></td>
+      <td><span class="tag ${hasIncome?"ok":"warn"}">${hasIncome?"可產出":"收入傳票未找到"}</span></td>
+    `;
+    tb.appendChild(tr);
+  });
+  const total=fang3rdState.results.filter(r=>r.incomeLines.length>0).length;
+  document.getElementById("fang-3rd-bal").textContent=
+    `共 ${fang3rdState.results.length} 個房源，${total} 個可產出傳票`;
+  document.getElementById("fang-3rd-btn-download").disabled=total===0;
+}
+
+document.getElementById("fang-3rd-btn-reset").addEventListener("click",()=>{
+  fang3rdState={cashflow:null,income:null,expense:null,invoice:null,results:[]};
+  ["cashflow","income","expense","invoice"].forEach(key=>{
+    const dz=document.getElementById(`fang-3rd-dz-${key}`);
+    dz.classList.remove("loaded");
+    const labels={cashflow:"上傳金流表",income:"上傳收入傳票檔",
+      expense:"上傳支出傳票檔",invoice:"上傳電子發票"};
+    dz.querySelector(".dz-label").textContent=labels[key];
+    document.getElementById(`fang-3rd-file-${key}`).value="";
+  });
+  document.getElementById("fang-3rd-result").hidden=true;
+  document.getElementById("fang-3rd-btn-match").disabled=true;
+  document.getElementById("fang-3rd-btn-download").disabled=true;
+  document.getElementById("fang-3rd-bal").textContent="—";
+  clearErr("fang-3rd-err");
+});
+
+document.getElementById("fang-3rd-btn-download").addEventListener("click",()=>{
+  const HEADERS=["年度","傳票號碼","傳票種類","日期","科目代號","客戶供應商代號","借/貸","金額","長摘要"];
+  const rows=[HEADERS];
+
+  fang3rdState.results.forEach(item=>{
+    const{cfRow,incomeLines,expenseLines,invoices}=item;
+    if(!incomeLines.length) return;
+    const rocYear=incomeLines[0]?.rocYear||115;
+
+    // Step1：收入傳票貸方→反轉為借方
+    incomeLines.forEach(line=>{
+      rows.push([rocYear,"DEFAULT",3,line.date||cfRow.date,
+        line.acctCode,line.custCode,1,line.amount,line.summary]);
+    });
+
+    // Step2：支出傳票借方→反轉為貸方
+    expenseLines.forEach(line=>{
+      rows.push([rocYear,"DEFAULT",3,line.date||cfRow.date,
+        line.acctCode,line.custCode,2,line.amount,line.summary]);
+    });
+
+    // Step3：電子發票（同房管處電子發票邏輯）
+    invoices.forEach(inv=>{
+      const s1=`${inv.caseName}-${inv.yearMonth}-${inv.type}`;
+      const s2=`${inv.caseName}-${inv.yearMonth}-${inv.type}-${inv.invoiceNo}`;
+      rows.push([inv.rocYear,"DEFAULT",3,inv.rocDateStr,
+        fangInvoiceAcctCode(inv.type),inv.custCode,2,inv.untaxed,s1]);
+      rows.push([inv.rocYear,"DEFAULT",3,inv.rocDateStr,
+        "2290",inv.custCode,2,inv.tax,s2]);
+    });
+
+    // Step4：金流表支出那筆（最後一列）
+    rows.push([rocYear,"DEFAULT",3,cfRow.date,
+      "1110-01","",2,cfRow.expense,cfRow.desc]);
+  });
+
+  const ws=XLSX.utils.aoa_to_sheet(rows);
+  ws["!cols"]=[{wch:8},{wch:12},{wch:10},{wch:14},{wch:14},{wch:16},{wch:6},{wch:10},{wch:50}];
+  const wb_out=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb_out,ws,"傳票累積檔");
+  XLSX.writeFile(wb_out,"傳票匯入_房管處第三次_"+new Date().toISOString().slice(0,10)+".xlsx");
 });
 
 /* ══════════════════════════════════════
