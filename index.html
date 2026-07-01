@@ -2203,16 +2203,22 @@ document.getElementById("fang-3rd-btn-match").addEventListener("click",()=>{
     const houseResults=cfRow.houses.map(h=>{
       const{houseName,code}=h;
 
-      // 用客供商代號比對（比摘要文字更精確）
-      const incomeLines=(fang3rdState.income||[]).filter(r=>
-        r.custCode===code&&r.dc===2);
+      // 雙重比對：客供商代號 OR 摘要包含房源名稱
+      const matchLine=(r,dc)=>{
+        const codeMatch=code&&r.custCode===code;
+        const nameMatch=r.summary.includes(houseName);
+        return r.dc===dc&&(codeMatch||nameMatch);
+      };
 
-      const expenseLines=(fang3rdState.expense||[]).filter(r=>
-        r.custCode===code&&r.dc===1);
+      const incomeLines=(fang3rdState.income||[]).filter(r=>matchLine(r,2));
+      const expenseLines=(fang3rdState.expense||[]).filter(r=>matchLine(r,1));
 
       const invoices=(fang3rdState.invoice||[]).filter(inv=>{
         const m=matchHousing(inv.caseName);
-        return m&&m.code===code;
+        const codeMatch=m&&m.code===code;
+        const nameMatch=inv.caseName.includes(houseName)||
+          houseName.includes(inv.caseName);
+        return codeMatch||nameMatch;
       });
 
       return{houseName, code, incomeLines, expenseLines, invoices};
