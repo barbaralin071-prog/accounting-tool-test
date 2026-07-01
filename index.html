@@ -2111,20 +2111,29 @@ document.getElementById("biz-btn-cashflow").addEventListener("click",()=>{
    第三次沖帳傳票邏輯
 ══════════════════════════════════════ */
 
-// 解析傳票檔（9欄格式）
+// 解析傳票檔（支援9欄和10欄格式）
 function parseVoucherXlsx(data){
   const wb=XLSX.read(data,{type:"array"});
   const ws=wb.Sheets[wb.SheetNames[0]];
   const aoa=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null});
   const hi=aoa.findIndex(r=>r&&r[0]==="年度");
-  if(hi===-1)throw new Error("找不到傳票檔格式，請確認是9欄傳票匯入檔");
-  return aoa.slice(hi+1).filter(r=>r[4]).map(r=>({
-    rocYear:r[0], date:String(r[3]||""),
-    acctCode:String(r[4]||"").trim(),
-    custCode:String(r[5]||"").trim(),
-    dc:Number(r[6]),
-    amount:Number(r[7])||0,
-    summary:String(r[8]||"").trim(),
+  if(hi===-1)throw new Error("找不到傳票檔格式，請確認是傳票匯入檔");
+  const headers=aoa[hi];
+  // 判斷欄位數：9欄或10欄（10欄多了「摘要」欄）
+  const has10=headers.length>=10&&headers[6]==="摘要";
+  // 欄位 index
+  const iAcct=4, iCust=5;
+  const iDc=has10?7:6;
+  const iAmt=has10?8:7;
+  const iSum=has10?9:8;
+  return aoa.slice(hi+1).filter(r=>r[iAcct]).map(r=>({
+    rocYear:r[0]||115,
+    date:String(r[3]||"").trim(),
+    acctCode:String(r[iAcct]||"").trim(),
+    custCode:String(r[iCust]||"").trim(),
+    dc:Number(r[iDc])||0,
+    amount:Number(r[iAmt])||0,
+    summary:String(r[iSum]||"").trim(),
   }));
 }
 
@@ -2203,11 +2212,6 @@ document.getElementById("fang-3rd-btn-match").addEventListener("click",()=>{
     const houseResults=cfRow.houses.map(h=>{
       const{houseName,code}=h;
 
-      console.log(`=== 比對房源: ${houseName} (code: ${code}) ===`);
-      console.log(`收入傳票共 ${(fang3rdState.income||[]).length} 筆`);
-      (fang3rdState.income||[]).slice(0,3).forEach(r=>
-        console.log(`  收入傳票範例: custCode=${r.custCode} dc=${r.dc} summary=${r.summary.slice(0,30)}`));
-
       // 雙重比對：客供商代號 OR 摘要包含房源名稱
       const matchLine=(r,dc)=>{
         const codeMatch=code&&r.custCode===code;
@@ -2217,7 +2221,6 @@ document.getElementById("fang-3rd-btn-match").addEventListener("click",()=>{
 
       const incomeLines=(fang3rdState.income||[]).filter(r=>matchLine(r,2));
       const expenseLines=(fang3rdState.expense||[]).filter(r=>matchLine(r,1));
-      console.log(`收入比對結果: ${incomeLines.length} 筆, 支出比對結果: ${expenseLines.length} 筆`);
 
       const invoices=(fang3rdState.invoice||[]).filter(inv=>{
         const m=matchHousing(inv.caseName);
