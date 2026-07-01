@@ -2203,11 +2203,12 @@ document.getElementById("fang-3rd-btn-match").addEventListener("click",()=>{
     const houseResults=cfRow.houses.map(h=>{
       const{houseName,code}=h;
 
+      // 用客供商代號比對（比摘要文字更精確）
       const incomeLines=(fang3rdState.income||[]).filter(r=>
-        r.summary.includes(houseName)&&r.dc===2);
+        r.custCode===code&&r.dc===2);
 
       const expenseLines=(fang3rdState.expense||[]).filter(r=>
-        r.summary.includes(houseName)&&r.dc===1);
+        r.custCode===code&&r.dc===1);
 
       const invoices=(fang3rdState.invoice||[]).filter(inv=>{
         const m=matchHousing(inv.caseName);
