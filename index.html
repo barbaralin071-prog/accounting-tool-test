@@ -2142,15 +2142,29 @@ function parseCashflowForThird(data){
     const expense=r[4]?Number(r[4]):null;
     if(!desc||!expense||isNaN(expense)||expense<=0) continue;
     if(desc==="說明") continue;
-    if(desc.includes("屋主")&&desc.includes("租金")){
-      const houseName=desc.split("-")[0].trim();
-      const houseMatch=matchHousing(houseName);
-      rows.push({
-        date:currentDate, desc, expense,
-        houseName, houseMatch,
-        code:houseMatch?houseMatch.code:houseName,
-      });
-    }
+    if(!desc.includes("屋主")||!desc.includes("租金")) continue;
+
+    // 從說明抓所有房源名稱（以「、」或「，」分隔的前段）
+    // 例如「永吉278居所、大安19居所-11506租金-屋主黃華郁」
+    // → 取第一個「-」之前的部分，再用「、」「，」分隔
+    const beforeDash=desc.split("-")[0];
+    const houseNames=beforeDash.split(/[、，,]/).map(s=>s.trim()).filter(Boolean);
+
+    const houses=houseNames.map(hn=>{
+      const houseMatch=matchHousing(hn);
+      return{
+        houseName:hn,
+        houseMatch,
+        code:houseMatch?houseMatch.code:hn,
+      };
+    });
+
+    rows.push({
+      date:currentDate,
+      desc,       // 完整原文（用於最後一列摘要）
+      expense,    // 整列支出金額
+      houses,     // 房源陣列（可能多個）
+    });
   }
   return rows;
 }
@@ -2185,24 +2199,25 @@ document.getElementById("fang-3rd-btn-match").addEventListener("click",()=>{
   const results=[];
 
   fang3rdState.cashflow.forEach(cfRow=>{
-    const houseName=cfRow.houseName;
-    const code=cfRow.code;
+    // 每個房源各自比對
+    const houseResults=cfRow.houses.map(h=>{
+      const{houseName,code}=h;
 
-    // 收入傳票：找同房源的貸方分錄（dc=2）
-    const incomeLines=(fang3rdState.income||[]).filter(r=>
-      r.summary.includes(houseName)&&r.dc===2);
+      const incomeLines=(fang3rdState.income||[]).filter(r=>
+        r.summary.includes(houseName)&&r.dc===2);
 
-    // 支出傳票：找同房源的借方分錄（dc=1）
-    const expenseLines=(fang3rdState.expense||[]).filter(r=>
-      r.summary.includes(houseName)&&r.dc===1);
+      const expenseLines=(fang3rdState.expense||[]).filter(r=>
+        r.summary.includes(houseName)&&r.dc===1);
 
-    // 電子發票：找同房源
-    const invoices=(fang3rdState.invoice||[]).filter(inv=>{
-      const m=matchHousing(inv.caseName);
-      return m&&m.code===code;
+      const invoices=(fang3rdState.invoice||[]).filter(inv=>{
+        const m=matchHousing(inv.caseName);
+        return m&&m.code===code;
+      });
+
+      return{houseName, code, incomeLines, expenseLines, invoices};
     });
 
-    results.push({cfRow, incomeLines, expenseLines, invoices});
+    results.push({cfRow, houseResults});
   });
 
   fang3rdState.results=results;
@@ -2213,25 +2228,31 @@ function renderFang3rdResult(){
   document.getElementById("fang-3rd-result").hidden=false;
   const tb=document.getElementById("fang-3rd-tb");
   tb.innerHTML="";
-  fang3rdState.results.forEach((item,i)=>{
-    const{cfRow,incomeLines,expenseLines,invoices}=item;
-    const hasIncome=incomeLines.length>0;
-    const tr=document.createElement("tr");
-    tr.className=hasIncome?"matched":"unmatched";
-    tr.innerHTML=`
-      <td>${i+1}</td>
-      <td>${cfRow.houseName}</td>
-      <td class="mono right">${fmtMoney(cfRow.expense)}</td>
-      <td><span class="tag ${hasIncome?"ok":"warn"}">${incomeLines.length} 筆</span></td>
-      <td><span class="tag ${expenseLines.length>0?"blue":"grey"}">${expenseLines.length} 筆</span></td>
-      <td><span class="tag ${invoices.length>0?"ok":"grey"}">${invoices.length} 張</span></td>
-      <td><span class="tag ${hasIncome?"ok":"warn"}">${hasIncome?"可產出":"收入傳票未找到"}</span></td>
-    `;
-    tb.appendChild(tr);
+  let rowNum=0;
+  fang3rdState.results.forEach(item=>{
+    const{cfRow,houseResults}=item;
+    houseResults.forEach(h=>{
+      rowNum++;
+      const hasIncome=h.incomeLines.length>0;
+      const tr=document.createElement("tr");
+      tr.className=hasIncome?"matched":"unmatched";
+      tr.innerHTML=`
+        <td>${rowNum}</td>
+        <td>${h.houseName}</td>
+        <td class="mono right">${fmtMoney(cfRow.expense)}</td>
+        <td><span class="tag ${hasIncome?"ok":"warn"}">${h.incomeLines.length} 筆</span></td>
+        <td><span class="tag ${h.expenseLines.length>0?"blue":"grey"}">${h.expenseLines.length} 筆</span></td>
+        <td><span class="tag ${h.invoices.length>0?"ok":"grey"}">${h.invoices.length} 張</span></td>
+        <td><span class="tag ${hasIncome?"ok":"warn"}">${hasIncome?"可產出":"收入傳票未找到"}</span></td>
+      `;
+      tb.appendChild(tr);
+    });
   });
-  const total=fang3rdState.results.filter(r=>r.incomeLines.length>0).length;
+
+  const total=fang3rdState.results.reduce((s,r)=>
+    s+r.houseResults.filter(h=>h.incomeLines.length>0).length,0);
   document.getElementById("fang-3rd-bal").textContent=
-    `共 ${fang3rdState.results.length} 個房源，${total} 個可產出傳票`;
+    `共 ${rowNum} 個房源，${total} 個可產出傳票`;
   document.getElementById("fang-3rd-btn-download").disabled=total===0;
 }
 
@@ -2257,35 +2278,42 @@ document.getElementById("fang-3rd-btn-download").addEventListener("click",()=>{
   const rows=[HEADERS];
 
   fang3rdState.results.forEach(item=>{
-    const{cfRow,incomeLines,expenseLines,invoices}=item;
-    if(!incomeLines.length) return;
-    const rocYear=incomeLines[0]?.rocYear||115;
+    const{cfRow,houseResults}=item;
+    const rocYear=115;
 
-    // Step1：收入傳票貸方→反轉為借方
-    incomeLines.forEach(line=>{
-      rows.push([rocYear,"DEFAULT",3,line.date||cfRow.date,
-        line.acctCode,line.custCode,1,line.amount,line.summary]);
+    // 每個房源的 Step1+2+3
+    houseResults.forEach(h=>{
+      if(!h.incomeLines.length) return;
+
+      // Step1：收入傳票貸方→反轉為借方
+      h.incomeLines.forEach(line=>{
+        rows.push([rocYear,"DEFAULT",3,line.date||cfRow.date,
+          line.acctCode,line.custCode,1,line.amount,line.summary]);
+      });
+
+      // Step2：支出傳票借方→反轉為貸方
+      h.expenseLines.forEach(line=>{
+        rows.push([rocYear,"DEFAULT",3,line.date||cfRow.date,
+          line.acctCode,line.custCode,2,line.amount,line.summary]);
+      });
+
+      // Step3：電子發票
+      h.invoices.forEach(inv=>{
+        const s1=`${inv.caseName}-${inv.yearMonth}-${inv.type}`;
+        const s2=`${inv.caseName}-${inv.yearMonth}-${inv.type}-${inv.invoiceNo}`;
+        rows.push([inv.rocYear,"DEFAULT",3,inv.rocDateStr,
+          fangInvoiceAcctCode(inv.type),inv.custCode,2,inv.untaxed,s1]);
+        rows.push([inv.rocYear,"DEFAULT",3,inv.rocDateStr,
+          "2290",inv.custCode,2,inv.tax,s2]);
+      });
     });
 
-    // Step2：支出傳票借方→反轉為貸方
-    expenseLines.forEach(line=>{
-      rows.push([rocYear,"DEFAULT",3,line.date||cfRow.date,
-        line.acctCode,line.custCode,2,line.amount,line.summary]);
-    });
-
-    // Step3：電子發票（同房管處電子發票邏輯）
-    invoices.forEach(inv=>{
-      const s1=`${inv.caseName}-${inv.yearMonth}-${inv.type}`;
-      const s2=`${inv.caseName}-${inv.yearMonth}-${inv.type}-${inv.invoiceNo}`;
-      rows.push([inv.rocYear,"DEFAULT",3,inv.rocDateStr,
-        fangInvoiceAcctCode(inv.type),inv.custCode,2,inv.untaxed,s1]);
-      rows.push([inv.rocYear,"DEFAULT",3,inv.rocDateStr,
-        "2290",inv.custCode,2,inv.tax,s2]);
-    });
-
-    // Step4：金流表支出那筆（最後一列）
-    rows.push([rocYear,"DEFAULT",3,cfRow.date,
-      "1110-01","",2,cfRow.expense,cfRow.desc]);
+    // Step4：最後一列，整列金流表支出（所有房源共用一列）
+    const hasAny=houseResults.some(h=>h.incomeLines.length>0);
+    if(hasAny){
+      rows.push([rocYear,"DEFAULT",3,cfRow.date,
+        "1110-01","",2,cfRow.expense,cfRow.desc]);
+    }
   });
 
   const ws=XLSX.utils.aoa_to_sheet(rows);
