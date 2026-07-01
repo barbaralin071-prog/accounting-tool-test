@@ -2203,6 +2203,11 @@ document.getElementById("fang-3rd-btn-match").addEventListener("click",()=>{
     const houseResults=cfRow.houses.map(h=>{
       const{houseName,code}=h;
 
+      console.log(`=== 比對房源: ${houseName} (code: ${code}) ===`);
+      console.log(`收入傳票共 ${(fang3rdState.income||[]).length} 筆`);
+      (fang3rdState.income||[]).slice(0,3).forEach(r=>
+        console.log(`  收入傳票範例: custCode=${r.custCode} dc=${r.dc} summary=${r.summary.slice(0,30)}`));
+
       // 雙重比對：客供商代號 OR 摘要包含房源名稱
       const matchLine=(r,dc)=>{
         const codeMatch=code&&r.custCode===code;
@@ -2212,6 +2217,7 @@ document.getElementById("fang-3rd-btn-match").addEventListener("click",()=>{
 
       const incomeLines=(fang3rdState.income||[]).filter(r=>matchLine(r,2));
       const expenseLines=(fang3rdState.expense||[]).filter(r=>matchLine(r,1));
+      console.log(`收入比對結果: ${incomeLines.length} 筆, 支出比對結果: ${expenseLines.length} 筆`);
 
       const invoices=(fang3rdState.invoice||[]).filter(inv=>{
         const m=matchHousing(inv.caseName);
