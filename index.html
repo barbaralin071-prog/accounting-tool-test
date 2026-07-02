@@ -2329,8 +2329,11 @@ document.getElementById("fang-3rd-btn-download").addEventListener("click",()=>{
     const hasAny=houseResults.some(h=>h.incomeLines.length>0);
     if(hasAny){
       const totalAmt=cfRow.expense+(cfRow.transferFee||0);
+      // 客供商代號取第一個房源的代號
+      const firstHouse=cfRow.houses[0];
+      const lastRowCode=firstHouse?firstHouse.code:"";
       rows.push([rocYear,"DEFAULT",3,cfRow.date,
-        "1110-01","",2,totalAmt,cfRow.desc]);
+        "1110-01",lastRowCode,2,totalAmt,cfRow.desc]);
     }
   });
 
