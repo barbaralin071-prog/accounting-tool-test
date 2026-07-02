@@ -2209,15 +2209,20 @@ document.getElementById("fang-3rd-btn-match").addEventListener("click",()=>{
   const results=[];
 
   fang3rdState.cashflow.forEach(cfRow=>{
+    // 從說明抓年月（5位數字，例如11506）
+    const ymMatch=desc.match(/(\d{5})/);
+    const yearMonth=ymMatch?ymMatch[1]:"";
+
     // 每個房源各自比對
     const houseResults=cfRow.houses.map(h=>{
       const{houseName,code}=h;
 
-      // 雙重比對：客供商代號 OR 摘要包含房源名稱
+      // 雙重比對：客供商代號 OR 摘要包含房源名稱，同時比對年月
       const matchLine=(r,dc)=>{
         const codeMatch=code&&r.custCode===code;
         const nameMatch=r.summary.includes(houseName);
-        return r.dc===dc&&(codeMatch||nameMatch);
+        const ymOk=!yearMonth||r.summary.includes(yearMonth);
+        return r.dc===dc&&(codeMatch||nameMatch)&&ymOk;
       };
 
       const incomeLines=(fang3rdState.income||[]).filter(r=>matchLine(r,2));
@@ -2228,13 +2233,14 @@ document.getElementById("fang-3rd-btn-match").addEventListener("click",()=>{
         const codeMatch=m&&m.code===code;
         const nameMatch=inv.caseName.includes(houseName)||
           houseName.includes(inv.caseName);
-        return codeMatch||nameMatch;
+        const ymOk=!yearMonth||inv.yearMonth===yearMonth;
+        return (codeMatch||nameMatch)&&ymOk;
       });
 
       return{houseName, code, incomeLines, expenseLines, invoices};
     });
 
-    results.push({cfRow, houseResults});
+    results.push({cfRow:{...cfRow,yearMonth}, houseResults});
   });
 
   fang3rdState.results=results;
@@ -2329,9 +2335,13 @@ document.getElementById("fang-3rd-btn-download").addEventListener("click",()=>{
     const hasAny=houseResults.some(h=>h.incomeLines.length>0);
     if(hasAny){
       const totalAmt=cfRow.expense+(cfRow.transferFee||0);
-      // 客供商代號取第一個房源的代號
       const firstHouse=cfRow.houses[0];
       const lastRowCode=firstHouse?firstHouse.code:"";
+      // 若有匯費，加一列 6270
+      if(cfRow.transferFee>0){
+        rows.push([rocYear,"DEFAULT",3,cfRow.date,
+          "6270","",1,cfRow.transferFee,"匯款手續費"]);
+      }
       rows.push([rocYear,"DEFAULT",3,cfRow.date,
         "1110-01",lastRowCode,2,totalAmt,cfRow.desc]);
     }
