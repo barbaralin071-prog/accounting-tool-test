@@ -2170,9 +2170,10 @@ function parseCashflowForThird(data){
 
     rows.push({
       date:currentDate,
-      desc,       // 完整原文（用於最後一列摘要）
-      expense,    // 整列支出金額
-      houses,     // 房源陣列（可能多個）
+      desc,
+      expense,
+      transferFee:Number(r[5])||0, // 匯費 col 5
+      houses,
     });
   }
   return rows;
@@ -2324,11 +2325,12 @@ document.getElementById("fang-3rd-btn-download").addEventListener("click",()=>{
       });
     });
 
-    // Step4：最後一列，整列金流表支出（所有房源共用一列）
+    // Step4：最後一列，整列金流表支出＋匯費（所有房源共用一列）
     const hasAny=houseResults.some(h=>h.incomeLines.length>0);
     if(hasAny){
+      const totalAmt=cfRow.expense+(cfRow.transferFee||0);
       rows.push([rocYear,"DEFAULT",3,cfRow.date,
-        "1110-01","",2,cfRow.expense,cfRow.desc]);
+        "1110-01","",2,totalAmt,cfRow.desc]);
     }
   });
 
