@@ -2615,38 +2615,38 @@ function parseFangInvoiceXlsx(data){
   const wb=XLSX.read(data,{type:"array"});
   const ws=wb.Sheets[wb.SheetNames[0]];
   const aoa=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null});
-  const hi=aoa.findIndex(r=>r.some(c=>c==="發票號碼"));
+  const hi=aoa.findIndex(r=>r&&r.some(c=>c==="發票號碼"));
   if(hi===-1)throw new Error("找不到「發票號碼」欄位");
-  const headers=aoa[hi];
-  const col=n=>headers.indexOf(n);
 
-  return aoa.slice(hi+1).filter(r=>r[col("發票號碼")]!=null).map(r=>{
-    const note=r[70]?String(r[70]).trim():""; // 備註 col 70
-    const brandName=r[col("發票品名(首欄)")]?String(r[col("發票品名(首欄)")]).trim():"";
+  return aoa.slice(hi+1).filter(r=>r[78]!=null).map(r=>{
+    // 固定欄位index（已確認）
+    const note=r[76]?String(r[76]).trim():"";      // 發票備註
+    const brandName=r[7]?String(r[7]).trim():"";   // 發票品名(首欄)
+    const invoiceNo=String(r[78]||"").trim();        // 發票號碼
+    const untaxed=Math.round(Number(r[73])||0);      // 小計（未稅）col 73
+    const tax=Math.round(Number(r[75])||0);          // 營業稅 col 75
+    const total=Number(r[77])||0;                    // 總金額 col 77
 
-    // ── 案件名稱：優先 col 22，備用從備註判斷 ──
+    // ── 案件名稱：優先 col 22，空白時從備註判斷 ──
     let caseName=r[22]?String(r[22]).trim():"";
-    if(!caseName && note){
-      // 備註各段以 / 分隔，清除空白
+    if(!caseName&&note){
       const parts=note.split("/").map(s=>s.trim()).filter(Boolean);
-      // 找第一個「看起來像房源名稱」的段落（不是純數字、不是年月、不是公司名）
       for(const p of parts){
-        const isNum=/^\d+$/.test(p);
-        const isYearMonth=/^\d{4,5}$/.test(p);
+        const isNum=/^\d+$/.test(p.replace(/,/g,""));
+        const isYM=/^\d{4,5}$/.test(p);
         const isCompany=p.includes("有限公司")||p.includes("股份有限公司");
-        if(!isNum&&!isYearMonth&&!isCompany&&p.length>=2){
-          // 如果含「.」則取第一段（例如「天祥80.11505」→「天祥80」）
+        if(!isNum&&!isYM&&!isCompany&&p.length>=2){
           caseName=p.includes(".")?p.split(".")[0].trim():p;
           break;
         }
       }
     }
 
-    // ── 判斷類型 ──
+    // ── 判斷類型：品名優先，否則從備註判斷 ──
     let type="服務費";
     if(brandName.includes("修繕費")||note.includes("修繕費")) type="修繕費";
     else if(brandName.includes("代管費")||note.includes("代管費")) type="代管費";
-    else if(note.includes("系統費")) type="代管費"; // 系統費歸代管費
+    else if(note.includes("系統費")||note.includes("系統管理費")) type="代管費";
 
     // ── 年月：從備註找5位數字 ──
     const ymMatch=note.match(/(\d{5})/);
@@ -2654,23 +2654,15 @@ function parseFangInvoiceXlsx(data){
 
     // ── 日期 ──
     let rocDateStr="";
-    try{ rocDateStr=toRoc(r[col("發票日期")]).str; }catch(e){}
+    try{ rocDateStr=toRoc(r[14]).str; }catch(e){}
     const rocYear=rocDateStr?parseInt(rocDateStr.split("/")[0]):115;
 
     // ── 客供商代號 ──
     const houseMatch=matchHousing(caseName);
-    const custCode=houseMatch?houseMatch.code:caseName;
+    const custCode=houseMatch?houseMatch.code:"";
 
-    // ── 金額：col 67 未稅、col 69 稅額、col 71 總金額 ──
-    const untaxed=Math.round(Number(r[67])||0);
-    const tax=Math.round(Number(r[69])||0);
-    const total=Number(r[71])||0;
-
-    return{
-      invoiceNo:String(r[col("發票號碼")]).trim(),
-      caseName, yearMonth, rocDateStr, rocYear, custCode, type,
-      untaxed, tax, total,
-    };
+    return{invoiceNo, caseName, yearMonth, rocDateStr, rocYear, custCode, type,
+      untaxed, tax, total};
   });
 }
 
