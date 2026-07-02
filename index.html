@@ -2617,18 +2617,25 @@ function parseFangInvoiceXlsx(data){
   const aoa=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null});
   const hi=aoa.findIndex(r=>r&&r.some(c=>c==="發票號碼"));
   if(hi===-1)throw new Error("找不到「發票號碼」欄位");
+  const headers=aoa[hi];
+  // 用欄位名稱找 index
+  const colMap={};
+  headers.forEach((h,i)=>{ if(h&&!colMap[h]) colMap[h]=i; });
+  // 「營業稅」有兩欄，取後面那個（小計未稅旁邊的那個）
+  const taxCols=headers.reduce((a,h,i)=>h==="營業稅"?[...a,i]:a,[]);
+  const taxCol=taxCols.length>=2?taxCols[taxCols.length-1]:taxCols[0];
+  const col=n=>colMap[n]??-1;
 
-  return aoa.slice(hi+1).filter(r=>r[78]!=null).map(r=>{
-    // 固定欄位index（已確認）
-    const note=r[76]?String(r[76]).trim():"";      // 發票備註
-    const brandName=r[7]?String(r[7]).trim():"";   // 發票品名(首欄)
-    const invoiceNo=String(r[78]||"").trim();        // 發票號碼
-    const untaxed=Math.round(Number(r[73])||0);      // 小計（未稅）col 73
-    const tax=Math.round(Number(r[75])||0);          // 營業稅 col 75
-    const total=Number(r[77])||0;                    // 總金額 col 77
+  return aoa.slice(hi+1).filter(r=>r[col("發票號碼")]!=null).map(r=>{
+    const note=r[col("發票備註")]?String(r[col("發票備註")]).trim():"";
+    const brandName=r[col("發票品名(首欄)")]?String(r[col("發票品名(首欄)")]).trim():"";
+    const invoiceNo=String(r[col("發票號碼")]||"").trim();
+    const untaxed=Math.round(Number(r[col("小計（未稅）")])||0);
+    const tax=Math.round(Number(r[taxCol])||0);
+    const total=Number(r[col("總金額")])||0;
 
-    // ── 案件名稱：優先 col 22，空白時從備註判斷 ──
-    let caseName=r[22]?String(r[22]).trim():"";
+    // 案件名稱：優先欄位，空白時從備註判斷
+    let caseName=r[col("合約案件名稱")]?String(r[col("合約案件名稱")]).trim():"";
     if(!caseName&&note){
       const parts=note.split("/").map(s=>s.trim()).filter(Boolean);
       for(const p of parts){
@@ -2642,22 +2649,23 @@ function parseFangInvoiceXlsx(data){
       }
     }
 
-    // ── 判斷類型：品名優先，否則從備註判斷 ──
+    // 判斷類型
     let type="服務費";
     if(brandName.includes("修繕費")||note.includes("修繕費")) type="修繕費";
     else if(brandName.includes("代管費")||note.includes("代管費")) type="代管費";
-    else if(note.includes("系統費")||note.includes("系統管理費")) type="代管費";
+    else if(note.includes("系統服務費")||note.includes("系統管理費")) type="系統服務費";
+    else if(note.includes("系統費")) type="系統服務費";
 
-    // ── 年月：從備註找5位數字 ──
+    // 年月
     const ymMatch=note.match(/(\d{5})/);
     const yearMonth=ymMatch?ymMatch[1]:"";
 
-    // ── 日期 ──
+    // 日期
     let rocDateStr="";
-    try{ rocDateStr=toRoc(r[14]).str; }catch(e){}
+    try{ rocDateStr=toRoc(r[col("發票日期")]).str; }catch(e){}
     const rocYear=rocDateStr?parseInt(rocDateStr.split("/")[0]):115;
 
-    // ── 客供商代號 ──
+    // 客供商代號
     const houseMatch=matchHousing(caseName);
     const custCode=houseMatch?houseMatch.code:"";
 
@@ -2669,7 +2677,13 @@ function parseFangInvoiceXlsx(data){
 function fangInvoiceAcctCode(type){
   if(type==="代管費") return "4101-02";
   if(type==="修繕費") return "4101-023";
-  return "4101-022";
+  if(type==="系統服務費") return "4101-024";
+  return "4101-022"; // 服務費
+}
+
+function fangInvoiceTypeName(type){
+  if(type==="系統服務費") return "系統服務費";
+  return type; // 服務費/代管費/修繕費
 }
 
 let fangInvState={invoices:[]};
