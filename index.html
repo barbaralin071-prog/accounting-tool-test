@@ -391,36 +391,55 @@ button.btn.ghost:hover{background:var(--accent-soft);}
 
   </div><!-- /fang-result -->
 
-  <!-- ── 第二次：請款支出傳票（UI 預留，程式後補）── -->
+  <!-- ── 第二次：請款支出金流表 ── -->
   <div style="margin-top:28px;padding-top:20px;border-top:2px solid var(--border);">
     <div style="font-size:14px;font-weight:700;margin-bottom:6px;">
-      📤 第二次：請款支出傳票
+      📤 第二次：請款支出金流表
     </div>
     <div style="font-size:13px;color:var(--ink-soft);margin-bottom:14px;">
-      上傳請款單，產出金流表及支出傳票匯入檔
+      上傳請款單／退款單，自動產出支出金流表
     </div>
     <div class="card">
       <div style="padding:16px 18px;border-bottom:1px solid var(--border);">
         <div class="upload-row" style="grid-template-columns:1fr 1fr;">
           <div>
-            <div class="dropzone" id="fang-pay-dz" style="opacity:0.5;cursor:not-allowed;">
+            <div class="dropzone" id="fang-pay-dz-req">
               <div class="dz-icon">📋</div>
               <div class="dz-label">上傳請款單</div>
-              <div class="dz-hint">功能開發中</div>
+              <div class="dz-hint">請款單.xlsx（選填）</div>
             </div>
+            <input type="file" id="fang-pay-file-req" accept=".xlsx" hidden>
           </div>
-          <div style="display:flex;align-items:center;padding:0 12px;">
-            <div style="font-size:13px;color:var(--ink-faint);">
-              🚧 此功能建置中，敬請期待
+          <div>
+            <div class="dropzone" id="fang-pay-dz-refund">
+              <div class="dz-icon">↩️</div>
+              <div class="dz-label">上傳退款單</div>
+              <div class="dz-hint">退款單.xlsx（選填）</div>
             </div>
+            <input type="file" id="fang-pay-file-refund" accept=".xlsx" hidden>
           </div>
+        </div>
+        <div class="errbox" id="fang-pay-err"></div>
+        <div style="display:flex;justify-content:flex-end;margin-top:8px;">
+          <button class="btn primary" id="fang-pay-btn-gen" disabled>產出金流表</button>
+        </div>
+      </div>
+      <div id="fang-pay-result" hidden>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr>
+              <th>#</th><th>日期</th><th>說明</th>
+              <th class="right">支出</th><th class="right">匯費</th><th>來源</th>
+            </tr></thead>
+            <tbody id="fang-pay-tb"></tbody>
+          </table>
         </div>
       </div>
       <div class="actbar">
-        <div></div>
+        <div class="bal" id="fang-pay-bal">—</div>
         <div class="btns">
-          <button class="btn primary" disabled>下載金流表</button>
-          <button class="btn primary" disabled>下載支出傳票匯入檔</button>
+          <button class="btn secondary" id="fang-pay-btn-reset">重新上傳</button>
+          <button class="btn primary" id="fang-pay-btn-download" disabled>下載支出金流表</button>
         </div>
       </div>
     </div>
@@ -2108,8 +2127,195 @@ document.getElementById("biz-btn-cashflow").addEventListener("click",()=>{
 });
 
 /* ══════════════════════════════════════
-   第三次沖帳傳票邏輯
+   第二次：請款支出金流表邏輯
 ══════════════════════════════════════ */
+
+// 判斷是否同仁代墊（收款人名稱含部門前綴）
+const DEPT_PREFIXES=["房管處","房務部","業務處","短租處","營運","行政","財務","資訊"];
+function isStaffAdvance(receiverName){
+  if(!receiverName) return false;
+  return DEPT_PREFIXES.some(d=>String(receiverName).startsWith(d));
+}
+
+// 從收款人名稱抓大名（去掉部門前綴和英文名）
+function extractStaffName(receiverName){
+  const s=String(receiverName).trim();
+  // 去掉部門前綴
+  let name=s;
+  for(const d of DEPT_PREFIXES){
+    if(s.startsWith(d)){name=s.slice(d.length).trim(); break;}
+  }
+  // 去掉空格後的英文名（例如「謝昇甫Tiger」→「謝昇甫」）
+  return name.replace(/\s.*$/,"").replace(/[A-Za-z]+$/,"").trim();
+}
+
+// 判斷是否國泰世華（不需匯費）
+function isKGIBank(bankName){
+  const s=String(bankName||"").trim();
+  return s.includes("國泰世華");
+}
+
+// 解析請款單
+function parseReqXlsx(data){
+  const wb=XLSX.read(data,{type:"array"});
+  const ws=wb.Sheets[wb.SheetNames[0]];
+  const aoa=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null});
+  const hi=aoa.findIndex(r=>r&&r[0]==="請款單流水號");
+  if(hi===-1)throw new Error("找不到請款單格式");
+  return aoa.slice(hi+1).filter(r=>r[0]).map(r=>{
+    const receiver=String(r[3]||"").trim();   // 收款人名稱
+    const bank=String(r[12]||"").trim();      // 銀行名稱
+    const note=String(r[33]||"").trim();      // 此筆請款備註
+    const amount=Number(r[35])||0;            // 總金額
+    const payDate=r[26];                      // 希望付款日
+    let rocDateStr="";
+    try{ rocDateStr=toRoc(payDate).str; }catch(e){}
+
+    // 說明欄組成
+    let desc=note;
+    if(isStaffAdvance(receiver)){
+      const staffName=extractStaffName(receiver);
+      desc=`${note}-${staffName}代`;
+    }
+
+    // 匯費判斷
+    const transferFee=isKGIBank(bank)?0:15;
+
+    return{source:"請款單",rocDateStr,desc,amount,transferFee,raw:r};
+  }).filter(r=>r.amount>0);
+}
+
+// 解析退款單
+function parseRefundXlsx(data){
+  const wb=XLSX.read(data,{type:"array"});
+  const ws=wb.Sheets[wb.SheetNames[0]];
+  const aoa=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null});
+  const hi=aoa.findIndex(r=>r&&r[0]==="退款單流水號");
+  if(hi===-1)throw new Error("找不到退款單格式");
+  return aoa.slice(hi+1).filter(r=>r[0]).map(r=>{
+    const note=String(r[34]||"").trim();  // 此筆請款備註
+    const amount=Number(r[38])||0;        // 總金額
+    const payDate=r[27];                  // 希望退款日
+    let rocDateStr="";
+    try{ rocDateStr=toRoc(payDate).str; }catch(e){}
+
+    // 解析說明：「房源-房號-房客名字 押金-電費...」或「房源-房號-房客名字 退押」
+    // → 組成「房源-房號-退押金-房客名字」
+    let desc=note;
+    // 抓房源（第一個-之前）、房號、房客名（空格前）
+    const spacePart=note.split(" ");
+    if(spacePart.length>=1){
+      const firstPart=spacePart[0]; // 例如「延吉68-A3黃芃培」或「汀州188-2A11 Pelayo...」
+      const dashParts=firstPart.split("-");
+      if(dashParts.length>=2){
+        const houseName=dashParts[0].trim();
+        const roomAndTenant=dashParts.slice(1).join("-").trim();
+        // 從roomAndTenant分離房號和房客名
+        const roomMatch=roomAndTenant.match(/^([A-Za-z0-9]+)([\u4e00-\u9fa5\u0000-\u007F\s].*)?$/);
+        const room=roomMatch?roomMatch[1]:"";
+        const tenant=roomMatch&&roomMatch[2]?roomMatch[2].trim():roomAndTenant;
+        desc=`${houseName}-${room}-退押金-${tenant}`;
+      }
+    }
+
+    return{source:"退款單",rocDateStr,desc,amount,transferFee:0,raw:r};
+  }).filter(r=>r.amount>0);
+}
+
+let fangPayState={req:null,refund:null,rows:[]};
+
+bindDropzone("fang-pay-dz-req","fang-pay-file-req",async(file,dz)=>{
+  try{
+    const data=await readFile(file);
+    fangPayState.req=parseReqXlsx(data);
+    dz.classList.add("loaded");
+    dz.querySelector(".dz-label").textContent="✓ "+file.name;
+  }catch(e){showErr("fang-pay-err",e.message);}
+  updateFangPayBtn();
+});
+
+bindDropzone("fang-pay-dz-refund","fang-pay-file-refund",async(file,dz)=>{
+  try{
+    const data=await readFile(file);
+    fangPayState.refund=parseRefundXlsx(data);
+    dz.classList.add("loaded");
+    dz.querySelector(".dz-label").textContent="✓ "+file.name;
+  }catch(e){showErr("fang-pay-err",e.message);}
+  updateFangPayBtn();
+});
+
+function updateFangPayBtn(){
+  const hasFile=fangPayState.req||fangPayState.refund;
+  document.getElementById("fang-pay-btn-gen").disabled=!hasFile;
+}
+
+document.getElementById("fang-pay-btn-gen").addEventListener("click",()=>{
+  clearErr("fang-pay-err");
+  const rows=[
+    ...(fangPayState.req||[]),
+    ...(fangPayState.refund||[]),
+  ];
+  // 按日期排序
+  rows.sort((a,b)=>a.rocDateStr.localeCompare(b.rocDateStr));
+  fangPayState.rows=rows;
+
+  // 渲染預覽
+  document.getElementById("fang-pay-result").hidden=false;
+  const tb=document.getElementById("fang-pay-tb");
+  tb.innerHTML="";
+  rows.forEach((row,i)=>{
+    const tr=document.createElement("tr");
+    tr.innerHTML=`
+      <td>${i+1}</td>
+      <td class="mono">${row.rocDateStr}</td>
+      <td style="max-width:300px;white-space:normal;">${row.desc}</td>
+      <td class="mono right">${fmtMoney(row.amount)}</td>
+      <td class="mono right">${row.transferFee||0}</td>
+      <td><span class="tag ${row.source==="請款單"?"blue":"warn"}">${row.source}</span></td>
+    `;
+    tb.appendChild(tr);
+  });
+
+  const total=rows.reduce((s,r)=>s+r.amount,0);
+  document.getElementById("fang-pay-bal").textContent=
+    `共 ${rows.length} 筆｜支出合計 ${fmtMoney(total)}`;
+  document.getElementById("fang-pay-btn-download").disabled=rows.length===0;
+});
+
+document.getElementById("fang-pay-btn-reset").addEventListener("click",()=>{
+  fangPayState={req:null,refund:null,rows:[]};
+  ["req","refund"].forEach(key=>{
+    const dz=document.getElementById(`fang-pay-dz-${key}`);
+    dz.classList.remove("loaded");
+    dz.querySelector(".dz-label").textContent=key==="req"?"上傳請款單":"上傳退款單";
+    document.getElementById(`fang-pay-file-${key}`).value="";
+  });
+  document.getElementById("fang-pay-result").hidden=true;
+  document.getElementById("fang-pay-btn-gen").disabled=true;
+  document.getElementById("fang-pay-btn-download").disabled=true;
+  document.getElementById("fang-pay-bal").textContent="—";
+  clearErr("fang-pay-err");
+});
+
+document.getElementById("fang-pay-btn-download").addEventListener("click",()=>{
+  const rows=fangPayState.rows;
+  if(!rows.length) return;
+  const rocYear=rows[0].rocDateStr?parseInt(rows[0].rocDateStr.split("/")[0]):115;
+  const aoa=[];
+  aoa.push([rocYear+"年","國泰世華/世貿分行 #14432 - 銀存明細　房管處",null,null,null,null,null]);
+  aoa.push(["日期",null,"說明","收入","支出","匯費","餘額"]);
+  let lastDate="";
+  rows.forEach(row=>{
+    const dateCell=row.rocDateStr===lastDate?null:row.rocDateStr;
+    aoa.push([dateCell,row.desc,null,null,row.amount,row.transferFee||null,null]);
+    lastDate=row.rocDateStr;
+  });
+  const ws=XLSX.utils.aoa_to_sheet(aoa);
+  ws["!cols"]=[{wch:12},{wch:50},{wch:12},{wch:12},{wch:10},{wch:8},{wch:12}];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,"房管處金流表");
+  XLSX.writeFile(wb,"金流表_房管處支出_"+new Date().toISOString().slice(0,10)+".xlsx");
+});
 
 // 解析傳票檔（支援9欄和10欄格式）
 function parseVoucherXlsx(data){
