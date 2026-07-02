@@ -428,7 +428,7 @@ button.btn.ghost:hover{background:var(--accent-soft);}
         <div class="tbl-wrap">
           <table>
             <thead><tr>
-              <th>#</th><th>單號</th><th>說明</th>
+              <th>#</th><th>說明</th><th>單號</th>
               <th class="right">支出</th><th class="right">匯費</th><th>來源</th>
             </tr></thead>
             <tbody id="fang-pay-tb"></tbody>
@@ -2266,8 +2266,8 @@ document.getElementById("fang-pay-btn-gen").addEventListener("click",()=>{
     const tr=document.createElement("tr");
     tr.innerHTML=`
       <td>${i+1}</td>
-      <td class="mono">${row.orderNo||""}</td>
       <td style="max-width:260px;white-space:normal;">${row.desc}</td>
+      <td class="mono">${row.orderNo||""}</td>
       <td class="mono right">${fmtMoney(row.amount)}</td>
       <td class="mono right">${row.transferFee||0}</td>
       <td><span class="tag ${row.source==="請款單"?"blue":"warn"}">${row.source}</span></td>
@@ -2302,11 +2302,11 @@ document.getElementById("fang-pay-btn-download").addEventListener("click",()=>{
   const rocYear=rows[0].rocDateStr?parseInt(rows[0].rocDateStr.split("/")[0]):115;
   const aoa=[];
   aoa.push([rocYear+"年","國泰世華/世貿分行 #14432 - 銀存明細　房管處",null,null,null,null,null]);
-  aoa.push(["日期","單號","說明","收入","支出","匯費","餘額"]);
+  aoa.push(["日期","說明","單號","收入","支出","匯費","餘額"]);
   let lastDate="";
   rows.forEach(row=>{
     const dateCell=row.rocDateStr===lastDate?null:row.rocDateStr;
-    aoa.push([dateCell,row.orderNo,row.desc,null,row.amount,row.transferFee||null,null]);
+    aoa.push([dateCell,row.desc,row.orderNo,null,row.amount,row.transferFee||null,null]);
     lastDate=row.rocDateStr;
   });
   const ws=XLSX.utils.aoa_to_sheet(aoa);
