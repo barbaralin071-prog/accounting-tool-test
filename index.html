@@ -2210,7 +2210,7 @@ document.getElementById("fang-3rd-btn-match").addEventListener("click",()=>{
 
   fang3rdState.cashflow.forEach(cfRow=>{
     // 從說明抓年月（5位數字，例如11506）
-    const ymMatch=desc.match(/(\d{5})/);
+    const ymMatch=cfRow.desc.match(/(\d{5})/);
     const yearMonth=ymMatch?ymMatch[1]:"";
 
     // 每個房源各自比對
