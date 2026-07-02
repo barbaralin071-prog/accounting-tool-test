@@ -2178,10 +2178,11 @@ function parseReqXlsx(data){
       desc=`${note}-${staffName}代`;
     }
 
-    // 匯費判斷
-    const transferFee=isKGIBank(bank)?0:15;
+    // 匯費判斷：國泰世華、電費、水費 → 不需匯費
+    const noFee=isKGIBank(bank)||note.includes("電費")||note.includes("水費");
+    const transferFee=noFee?0:15;
 
-    return{source:"請款單",rocDateStr,desc,amount,transferFee,raw:r};
+    return{source:"請款單",rocDateStr:"",desc,amount,transferFee,raw:r};
   }).filter(r=>r.amount>0);
 }
 
@@ -2199,26 +2200,25 @@ function parseRefundXlsx(data){
     let rocDateStr="";
     try{ rocDateStr=toRoc(payDate).str; }catch(e){}
 
-    // 解析說明：「房源-房號-房客名字 押金-電費...」或「房源-房號-房客名字 退押」
-    // → 組成「房源-房號-退押金-房客名字」
+    // 解析說明：找「押金」前的內容 → 組成「房源-房號-退押金-房客名字」
     let desc=note;
-    // 抓房源（第一個-之前）、房號、房客名（空格前）
-    const spacePart=note.split(" ");
-    if(spacePart.length>=1){
-      const firstPart=spacePart[0]; // 例如「延吉68-A3黃芃培」或「汀州188-2A11 Pelayo...」
-      const dashParts=firstPart.split("-");
-      if(dashParts.length>=2){
-        const houseName=dashParts[0].trim();
-        const roomAndTenant=dashParts.slice(1).join("-").trim();
-        // 從roomAndTenant分離房號和房客名
-        const roomMatch=roomAndTenant.match(/^([A-Za-z0-9]+)([\u4e00-\u9fa5\u0000-\u007F\s].*)?$/);
+    const depositIdx=note.indexOf("押金");
+    if(depositIdx>0){
+      const beforeDeposit=note.slice(0,depositIdx).trim();
+      const dashIdx=beforeDeposit.indexOf("-");
+      if(dashIdx>0){
+        const houseName=beforeDeposit.slice(0,dashIdx).trim();
+        const rest=beforeDeposit.slice(dashIdx+1).trim();
+        const roomMatch=rest.match(/^([A-Za-z0-9\-]+)\s*(.*)/);
         const room=roomMatch?roomMatch[1]:"";
-        const tenant=roomMatch&&roomMatch[2]?roomMatch[2].trim():roomAndTenant;
+        const tenant=roomMatch?roomMatch[2].trim():rest;
         desc=`${houseName}-${room}-退押金-${tenant}`;
+      }else{
+        desc=`${beforeDeposit}-退押金`;
       }
     }
 
-    return{source:"退款單",rocDateStr,desc,amount,transferFee:0,raw:r};
+    return{source:"退款單",rocDateStr:"",desc,amount,transferFee:0,raw:r};
   }).filter(r=>r.amount>0);
 }
 
@@ -2255,8 +2255,7 @@ document.getElementById("fang-pay-btn-gen").addEventListener("click",()=>{
     ...(fangPayState.req||[]),
     ...(fangPayState.refund||[]),
   ];
-  // 按日期排序
-  rows.sort((a,b)=>a.rocDateStr.localeCompare(b.rocDateStr));
+  // 維持原始順序（請款單在前，退款單在後），不排序
   fangPayState.rows=rows;
 
   // 渲染預覽
