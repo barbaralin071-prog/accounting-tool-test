@@ -2155,15 +2155,27 @@ document.getElementById("biz-btn-cashflow").addEventListener("click",()=>{
 // 解析支出金流表產出傳票
 function parseExpenseCashflowXlsx(data){
   const wb=XLSX.read(data,{type:"array"});
-  // 讀第一個工作表
   const ws=wb.Sheets[wb.SheetNames[0]];
   const aoa=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null});
+
+  // 找標題列（含「說明」和「支出」的那列）
+  const hi=aoa.findIndex(r=>r&&r.some(c=>c==="說明")&&r.some(c=>c==="支出"));
+  if(hi===-1)throw new Error("找不到金流表格式，請確認欄位含「說明」和「支出」");
+
+  const headers=aoa[hi];
+  const col=n=>headers.findIndex(h=>h===n);
+
+  const iDesc=col("說明");
+  const iOrderNo=col("單號");
+  const iExpense=col("支出");
+  const iFee=col("匯費");
+
   const rows=[];
-  for(const r of aoa){
-    const desc=r[1]?String(r[1]).replace(/[\r\n]+/g," ").trim():"";
-    const orderNo=r[2]?String(r[2]).trim():"";
-    const expense=r[4]?Number(r[4]):null;
-    const fee=r[5]?Number(r[5]):0;
+  for(const r of aoa.slice(hi+1)){
+    const desc=r[iDesc]?String(r[iDesc]).replace(/[\r\n]+/g," ").trim():"";
+    const orderNo=iOrderNo>=0&&r[iOrderNo]?String(r[iOrderNo]).trim():"";
+    const expense=iExpense>=0&&r[iExpense]?Number(r[iExpense]):null;
+    const fee=iFee>=0&&r[iFee]?Number(r[iFee]):0;
     if(!desc||!expense||isNaN(expense)||expense<=0) continue;
     if(desc==="說明") continue;
     rows.push({desc, orderNo, expense, fee:isNaN(fee)?0:fee});
@@ -2178,9 +2190,9 @@ function buildExpenseVoucherLines(row){
   const fee=row.fee||0;
   const lines=[];
 
-  // 抓房源名稱（第一個 - 之前）
-  const houseName=desc.split("-")[0].trim();
-  const houseMatch=matchHousing(houseName);
+  // 抓房源名稱（第一個 - 或空格之前）
+  const firstPart=desc.split(/[-\s]/)[0].trim();
+  const houseMatch=matchHousing(firstPart)||matchHousing(desc.split("-")[0].trim());
   const code=houseMatch?houseMatch.code:"";
 
   if(desc.includes("退押金")){
