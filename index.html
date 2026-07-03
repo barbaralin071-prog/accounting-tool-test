@@ -2178,11 +2178,15 @@ function parseReqXlsx(data){
       desc=`${note}-${staffName}代`;
     }
 
-    // 匯費判斷：國泰世華、電費、水費 → 不需匯費
-    const noFee=isKGIBank(bank)||note.includes("電費")||note.includes("水費");
+    // 匯費判斷：國泰世華、或說明含以下關鍵字 → 不需匯費
+    const NO_FEE_KEYWORDS=["電費","水費","電信費","網路費","第四台","凱擘寬頻","中嘉網路"];
+    const noFee=isKGIBank(bank)||NO_FEE_KEYWORDS.some(k=>note.includes(k));
     const transferFee=noFee?0:15;
 
-    return{source:"請款單",orderNo:String(r[0]||"").trim(),rocDateStr:"",desc,amount,transferFee,raw:r};
+    return{source:"請款單",orderNo:String(r[0]||"").trim(),rocDateStr:"",desc,amount,transferFee,
+      reqType:String(r[25]||"").trim(),   // 請款類型 col 25
+      receiver:String(r[3]||"").trim(),   // 收款人名稱 col 3
+      raw:r};
   }).filter(r=>r.amount>0);
 }
 
@@ -2299,20 +2303,76 @@ document.getElementById("fang-pay-btn-reset").addEventListener("click",()=>{
 document.getElementById("fang-pay-btn-download").addEventListener("click",()=>{
   const rows=fangPayState.rows;
   if(!rows.length) return;
-  const rocYear=rows[0].rocDateStr?parseInt(rows[0].rocDateStr.split("/")[0]):115;
-  const aoa=[];
-  aoa.push([rocYear+"年","國泰世華/世貿分行 #14432 - 銀存明細　房管處",null,null,null,null,null]);
-  aoa.push(["日期","說明","單號","收入","支出","匯費","餘額"]);
-  let lastDate="";
-  rows.forEach(row=>{
-    const dateCell=row.rocDateStr===lastDate?null:row.rocDateStr;
-    aoa.push([dateCell,row.desc,row.orderNo,null,row.amount,row.transferFee||null,null]);
-    lastDate=row.rocDateStr;
-  });
-  const ws=XLSX.utils.aoa_to_sheet(aoa);
-  ws["!cols"]=[{wch:12},{wch:50},{wch:12},{wch:12},{wch:10},{wch:8},{wch:12}];
   const wb=XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb,ws,"房管處金流表");
+
+  // 工作頁對應表
+  const SHEET_MAP={
+    "全居代管":"全居代管",
+    "社宅業務":"社宅業務",
+    "業務勞報":"業務勞報",
+    "投資勞報":"投資勞報",
+    "公司帳務":"公司帳戶+全居包租",
+    "全居包租":"公司帳戶+全居包租",
+    "工程帳務":"工程帳務",
+    "全居代管(合作拆帳)":"全居代管(合作拆帳)",
+  };
+
+  // 請款單依工作頁分組
+  const sheetGroups={};
+  rows.filter(r=>r.source==="請款單").forEach(row=>{
+    const sheetName=SHEET_MAP[row.reqType]||row.reqType||"其他";
+    if(!sheetGroups[sheetName]) sheetGroups[sheetName]=[];
+    sheetGroups[sheetName].push(row);
+  });
+
+  // 退款單獨立一頁
+  const refundRows=rows.filter(r=>r.source==="退款單");
+  if(refundRows.length) sheetGroups["退款單"]=refundRows;
+
+  // 建立每個工作頁
+  const sheetOrder=["全居代管","社宅業務","業務勞報","投資勞報",
+    "公司帳戶+全居包租","工程帳務","全居代管(合作拆帳)","退款單","其他"];
+
+  sheetOrder.forEach(sheetName=>{
+    if(!sheetGroups[sheetName]||!sheetGroups[sheetName].length) return;
+    const rows=sheetGroups[sheetName];
+
+    // 請款單：依收款人分組，同收款人匯費只收一次
+    const aoa=[];
+    aoa.push(["日期","說明","單號","收入","支出","匯費","餘額"]);
+
+    if(sheetName==="退款單"){
+      // 退款單不分組，直接列出
+      rows.forEach(row=>{
+        aoa.push([null,row.desc,row.orderNo,null,row.amount,null,null]);
+      });
+    } else {
+      // 依收款人分組
+      const receiverGroups={};
+      const receiverOrder=[];
+      rows.forEach(row=>{
+        if(!receiverGroups[row.receiver]){
+          receiverGroups[row.receiver]=[];
+          receiverOrder.push(row.receiver);
+        }
+        receiverGroups[row.receiver].push(row);
+      });
+
+      receiverOrder.forEach(receiver=>{
+        const group=receiverGroups[receiver];
+        group.forEach((row,idx)=>{
+          // 匯費只在同收款人第一筆顯示
+          const fee=idx===0&&row.transferFee>0?row.transferFee:null;
+          aoa.push([null,row.desc,row.orderNo,null,row.amount,fee,null]);
+        });
+      });
+    }
+
+    const ws=XLSX.utils.aoa_to_sheet(aoa);
+    ws["!cols"]=[{wch:10},{wch:50},{wch:20},{wch:12},{wch:12},{wch:8},{wch:12}];
+    XLSX.utils.book_append_sheet(wb,ws,sheetName.slice(0,31));
+  });
+
   XLSX.writeFile(wb,"金流表_房管處支出_"+new Date().toISOString().slice(0,10)+".xlsx");
 });
 
