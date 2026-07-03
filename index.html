@@ -425,14 +425,24 @@ button.btn.ghost:hover{background:var(--accent-soft);}
         </div>
       </div>
       <div id="fang-pay-result" hidden>
-        <div class="tbl-wrap">
-          <table>
-            <thead><tr>
-              <th>#</th><th>說明</th><th>單號</th>
-              <th class="right">支出</th><th class="right">匯費</th><th>來源</th>
-            </tr></thead>
-            <tbody id="fang-pay-tb"></tbody>
-          </table>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 18px;border-bottom:1px solid var(--border);cursor:pointer;"
+          onclick="const tb=document.getElementById('fang-pay-tb-wrap');const icon=document.getElementById('fang-pay-toggle');tb.hidden=!tb.hidden;icon.textContent=tb.hidden?'▶':'▼';">
+          <div style="font-size:13px;font-weight:600;">
+            <span id="fang-pay-toggle">▼</span>
+            　明細預覽（點擊收合／展開）
+          </div>
+          <div id="fang-pay-summary-line" style="font-size:12.5px;color:var(--ink-soft);"></div>
+        </div>
+        <div id="fang-pay-tb-wrap">
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr>
+                <th>#</th><th>說明</th><th>單號</th>
+                <th class="right">支出</th><th class="right">匯費</th><th>來源</th>
+              </tr></thead>
+              <tbody id="fang-pay-tb"></tbody>
+            </table>
+          </div>
         </div>
       </div>
       <div class="actbar">
@@ -2481,8 +2491,11 @@ document.getElementById("fang-pay-btn-gen").addEventListener("click",()=>{
   // 維持原始順序（請款單在前，退款單在後），不排序
   fangPayState.rows=rows;
 
-  // 渲染預覽
   document.getElementById("fang-pay-result").hidden=false;
+  // 預設收合
+  document.getElementById("fang-pay-tb-wrap").hidden=true;
+  document.getElementById("fang-pay-toggle").textContent="▶";
+
   const tb=document.getElementById("fang-pay-tb");
   tb.innerHTML="";
   rows.forEach((row,i)=>{
@@ -2499,8 +2512,11 @@ document.getElementById("fang-pay-btn-gen").addEventListener("click",()=>{
   });
 
   const total=rows.reduce((s,r)=>s+r.amount,0);
-  document.getElementById("fang-pay-bal").textContent=
-    `共 ${rows.length} 筆｜支出合計 ${fmtMoney(total)}`;
+  const reqCount=rows.filter(r=>r.source==="請款單").length;
+  const refCount=rows.filter(r=>r.source==="退款單").length;
+  const summaryText=`請款單 ${reqCount} 筆 ／ 退款單 ${refCount} 筆 ／ 支出合計 ${fmtMoney(total)}`;
+  document.getElementById("fang-pay-bal").textContent=summaryText;
+  document.getElementById("fang-pay-summary-line").textContent=summaryText;
   document.getElementById("fang-pay-btn-download").disabled=rows.length===0;
 });
 
