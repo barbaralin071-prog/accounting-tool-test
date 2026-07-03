@@ -2327,6 +2327,11 @@ document.getElementById("fang-pay-btn-voucher").addEventListener("click",()=>{
   const HEADERS=["年度","傳票號碼","傳票種類","日期","科目代號","客戶供應商代號","借/貸","金額","長摘要"];
   const rows=[HEADERS];
 
+  console.log("=== 支出傳票 debug ===");
+  console.log("筆數:", fangPayVoucherState.rows.length);
+  fangPayVoucherState.rows.slice(0,3).forEach((r,i)=>
+    console.log(`[${i}] expense:${r.expense} fee:${r.fee} desc:${r.desc?.slice(0,30)}`));
+
   fangPayVoucherState.rows.forEach(row=>{
     const lines=buildExpenseVoucherLines(row);
     lines.forEach(line=>{
