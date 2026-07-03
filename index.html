@@ -2171,7 +2171,13 @@ function parseExpenseCashflowXlsx(data){
     const iFee=headers.findIndex(h=>h==="匯費");
 
     aoa.slice(hi+1).forEach(r=>{
-      const desc=r[iDesc]?String(r[iDesc]).replace(/[\r\n_x000d_]+/g," ").replace(/\s+/g," ").trim():"";
+      // 清理說明欄：換行符、_x000d_、數字中間的空格
+      const rawDesc=r[iDesc]?String(r[iDesc]):"";
+      const desc=rawDesc
+        .replace(/_x000d_/g," ")
+        .replace(/[\r\n]+/g," ")
+        .replace(/(\d)\s+(\d)/g,"$1$2") // 清除數字間空格（例如「艋舺12 0」→「艋舺120」）
+        .replace(/\s+/g," ").trim();
       const orderNo=iOrderNo>=0&&r[iOrderNo]?String(r[iOrderNo]).trim():"";
       const expense=iExpense>=0&&r[iExpense]?Number(r[iExpense]):null;
       const fee=iFee>=0&&r[iFee]?Number(r[iFee]):0;
@@ -2191,9 +2197,25 @@ function buildExpenseVoucherLines(row){
   const fee=row.fee||0;
   const lines=[];
 
-  // 抓房源名稱（第一個 - 或空格之前）
-  const firstPart=desc.split(/[-\s]/)[0].trim();
-  const houseMatch=matchHousing(firstPart)||matchHousing(desc.split("-")[0].trim());
+  // 抓房源名稱：嘗試說明的各個段落
+  const tryMatch=(s)=>{
+    if(!s) return null;
+    // 先嘗試直接比對
+    let m=matchHousing(s.trim());
+    if(m) return m;
+    // 再去掉空格後比對（處理數字間有空格的情況）
+    const noSpace=s.replace(/\s/g,"");
+    m=matchHousing(noSpace.trim());
+    if(m) return m;
+    return null;
+  };
+
+  const descParts=desc.split(/[-、，,\/\s]+/);
+  let houseMatch=null;
+  for(const part of descParts){
+    houseMatch=tryMatch(part);
+    if(houseMatch) break;
+  }
   const code=houseMatch?houseMatch.code:"";
 
   if(desc.includes("退押金")){
