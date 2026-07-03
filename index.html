@@ -1291,6 +1291,7 @@ document.querySelectorAll(".tab").forEach(tab=>{
 function bindDropzone(dzId, fileInputId, onFile){
   const dz=document.getElementById(dzId);
   const fi=document.getElementById(fileInputId);
+  if(!dz||!fi){console.warn(`bindDropzone: 找不到元素 ${dzId} 或 ${fileInputId}`); return;}
   dz.addEventListener("click",()=>fi.click());
   dz.addEventListener("dragover",e=>{e.preventDefault();dz.classList.add("dragover");});
   dz.addEventListener("dragleave",()=>dz.classList.remove("dragover"));
@@ -2182,8 +2183,10 @@ function parseExpenseCashflowXlsx(data){
       const orderNo=iOrderNo>=0&&r[iOrderNo]?String(r[iOrderNo]).trim():"";
       const expense=iExpense>=0&&r[iExpense]?Number(r[iExpense]):null;
       const fee=iFee>=0&&r[iFee]?Number(r[iFee]):0;
-      if(!desc||!expense||isNaN(expense)||expense<=0) return;
-      allRows.push({desc, orderNo, expense, fee:isNaN(fee)?0:fee, sheet:sheetName});
+      if(!expense||isNaN(expense)||expense<=0) return;
+      // 說明空白時用單號代替
+      const finalDesc=desc||orderNo||"（無說明）";
+      allRows.push({desc:finalDesc, orderNo, expense, fee:isNaN(fee)?0:fee, sheet:sheetName});
     });
   });
 
@@ -2225,27 +2228,32 @@ function buildExpenseVoucherLines(row){
     lines.push({acctCode:"1110-01",custCode:code,dc:2,amount:amt,summary:desc});
 
   }else{
-    // 修繕費（同仁代墊或廠商請款）
-    // 判斷多房源：說明含「、」
-    const parts=desc.replace(/-[^代]*代$/,""); // 去掉結尾的 -XXX代
+    const parts=desc.replace(/-[^代]*代$/,"");
     const houseItems=parseExpenseItems(parts);
 
-    houseItems.forEach(item=>{
-      const hm=matchHousing(item.houseName);
-      const c=hm?hm.code:"";
-      lines.push({acctCode:"131450-01",custCode:c,dc:1,amount:item.amount,
-        summary:item.summary});
-    });
+    // 說明欄沒有金額標記時，整筆用 row.expense
+    const hasAmtInDesc=desc.includes("$");
+    if(!hasAmtInDesc||houseItems.every(i=>i.amount===0)){
+      // 無金額標記：整筆一列借方
+      lines.push({acctCode:"131450-01",custCode:code,dc:1,amount:amt,summary:desc});
+    }else{
+      houseItems.forEach(item=>{
+        const hm=matchHousing(item.houseName);
+        const c=hm?hm.code:"";
+        lines.push({acctCode:"131450-01",custCode:c,dc:1,amount:item.amount,
+          summary:item.summary});
+      });
+    }
 
-    // 有匯費則加 6270
     if(fee>0){
       lines.push({acctCode:"6270",custCode:"",dc:1,amount:fee,summary:"匯款手續費"});
     }
 
-    // 貸方：1110-01，客供商空白（同仁代墊）or 有代號（廠商）
     const isStaff=/代$/.test(desc.trim());
-    const totalAmt=houseItems.reduce((s,i)=>s+i.amount,0)+(fee||0);
-    const allSummary=houseItems.map(i=>i.summary).join("、");
+    const totalAmt=hasAmtInDesc&&!houseItems.every(i=>i.amount===0)
+      ?houseItems.reduce((s,i)=>s+i.amount,0)+(fee||0)
+      :amt+(fee||0);
+    const allSummary=desc;
     lines.push({acctCode:"1110-01",custCode:isStaff?"":code,dc:2,
       amount:totalAmt,summary:allSummary});
   }
