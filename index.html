@@ -2152,17 +2152,20 @@ document.getElementById("biz-btn-cashflow").addEventListener("click",()=>{
   XLSX.writeFile(wb,"金流表_業務處_"+new Date().toISOString().slice(0,10)+".xlsx");
 });
 
-// 解析支出金流表產出傳票（支援多工作頁）
 function parseExpenseCashflowXlsx(data){
-  const wb=XLSX.read(data,{type:"array"});
+  const wb=XLSX.read(data,{type:"array",cellText:false,cellDates:true});
   const allRows=[];
 
   wb.SheetNames.forEach(sheetName=>{
     const ws=wb.Sheets[sheetName];
     const aoa=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null});
-    // 找標題列
+
+    // debug：看前3列
+    console.log(`=== ${sheetName} ===`);
+    aoa.slice(0,3).forEach((r,i)=>console.log(`[${i}]`,JSON.stringify(r)));
+
     const hi=aoa.findIndex(r=>r&&r.some(c=>c==="說明")&&r.some(c=>c==="支出"));
-    if(hi===-1) return; // 此頁找不到標題，跳過
+    if(hi===-1){console.log(`${sheetName}: 找不到標題`); return;}
 
     const headers=aoa[hi];
     const iDesc=headers.findIndex(h=>h==="說明");
@@ -2170,14 +2173,12 @@ function parseExpenseCashflowXlsx(data){
     const iExpense=headers.findIndex(h=>h==="支出");
     const iFee=headers.findIndex(h=>h==="匯費");
 
-    aoa.slice(hi+1).forEach(r=>{
-      // 清理說明欄：換行符、_x000d_、數字中間的空格
+    console.log(`標題列index: ${hi}, iDesc:${iDesc}, iExpense:${iExpense}`);
+
+    aoa.slice(hi+1).forEach((r,ri)=>{
+      if(ri<2) console.log(`資料列[${ri}]:`, JSON.stringify(r?.slice(0,7)));
       const rawDesc=r[iDesc]?String(r[iDesc]):"";
-      const desc=rawDesc
-        .replace(/_x000d_/g," ")
-        .replace(/[\r\n]+/g," ")
-        .replace(/(\d)\s+(\d)/g,"$1$2") // 清除數字間空格（例如「艋舺12 0」→「艋舺120」）
-        .replace(/\s+/g," ").trim();
+      const desc=rawDesc.replace(/_x000d_/g," ").replace(/[\r\n]+/g," ").replace(/(\d)\s+(\d)/g,"$1$2").replace(/\s+/g," ").trim();
       const orderNo=iOrderNo>=0&&r[iOrderNo]?String(r[iOrderNo]).trim():"";
       const expense=iExpense>=0&&r[iExpense]?Number(r[iExpense]):null;
       const fee=iFee>=0&&r[iFee]?Number(r[iFee]):0;
