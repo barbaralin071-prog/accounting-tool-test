@@ -1869,7 +1869,9 @@ document.getElementById("fang-btn-cashflow").addEventListener("click",()=>{
     const s=item.source; const m=s.match;
     if(!m) return;
     const banks=Array.isArray(item.bank)?item.bank:[item.bank];
-    const summary=`${m.matchedName}-${s.rocYear+pad2(s.rocMonth)}租金-${s.tenant}`;
+    // 物件名稱 = 房源名稱 + 房號（remainder）
+    const objName=m.remainder?`${m.matchedName}-${m.remainder}`:m.matchedName;
+    const summary=`${objName}-${s.rocYear+pad2(s.rocMonth)}租金-${s.tenant}`;
     banks.forEach(b=>{
       const idx=bankIndexMap.get(b);
       if(idx!==undefined) bankSummaryMap.set(idx, summary);
