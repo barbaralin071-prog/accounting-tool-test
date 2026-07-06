@@ -965,8 +965,9 @@ function parseThirdXlsx(data){
   const sheetName=wb.SheetNames.includes("全部資料")?"全部資料":wb.SheetNames[wb.SheetNames.length-1];
   const ws=wb.Sheets[sheetName];
   const aoa=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null});
-  const hi=aoa.findIndex(r=>r.some(c=>c==="編號"));
-  if(hi===-1)throw new Error("找不到「編號」欄位，請確認是帳務管理報表格式");
+  // 找真正的標題列：第一欄是「No.」的那列
+  const hi=aoa.findIndex(r=>r&&(r[0]==="No."||r[0]==="no.")&&r.some(c=>c==="物件名稱"));
+  if(hi===-1)throw new Error("找不到帳務報表標題列，請確認是帳務管理報表格式");
   const headers=aoa[hi];
   const col=n=>headers.indexOf(n);
   return aoa.slice(hi+1)
@@ -1127,7 +1128,7 @@ function reconcile(sourceList, bankList){
     for(let i=0; i<bankList.length; i++){
       if(bankUsed.has(i)) continue;
       const b = bankList[i];
-      if(dateDiffDays(s.dateKey, b.dateKey)<=1
+      if(dateDiffDays(s.dateKey, b.dateKey)<=5
         && b.amount===s.amount
         && last5match(s.last5, b)){
         found = i; break;
@@ -1143,7 +1144,7 @@ function reconcile(sourceList, bankList){
     const candidates = bankList
       .map((b,i)=>({...b,_i:i}))
       .filter(b => !bankUsed.has(b._i)
-        && dateDiffDays(s.dateKey, b.dateKey)<=1
+        && dateDiffDays(s.dateKey, b.dateKey)<=5
         && (last5match(s.last5, b) || nameInNote(s.houseName||s.objName||'', b.note||'')));
 
     const combo = findSubsetSum(candidates, s.amount);
@@ -2754,8 +2755,12 @@ document.getElementById("fang-3rd-btn-match").addEventListener("click",()=>{
         return r.dc===dc&&(codeMatch||nameMatch)&&ymOk;
       };
 
-      const incomeLines=(fang3rdState.income||[]).filter(r=>matchLine(r,2));
-      const expenseLines=(fang3rdState.expense||[]).filter(r=>matchLine(r,1));
+      // 收入傳票：找同房源的貸方（dc=2），排除 1110-01（借方科目）
+      const incomeLines=(fang3rdState.income||[]).filter(r=>
+        matchLine(r,2)&&r.acctCode!=="1110-01");
+      // 支出傳票：找同房源的借方（dc=1），排除屋主撥款那筆
+      const expenseLines=(fang3rdState.expense||[]).filter(r=>
+        matchLine(r,1)&&!r.summary.includes("屋主")&&r.acctCode!=="1110-01");
 
       const invoices=(fang3rdState.invoice||[]).filter(inv=>{
         const m=matchHousing(inv.caseName);
