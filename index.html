@@ -2240,82 +2240,89 @@ function buildExpenseVoucherLines(row){
     lines.push({acctCode:"1110-01",custCode:code,dc:2,amount:amt,summary:desc});
 
   }else{
-    const parts=desc.replace(/-[^代]*代$/,"");
-    const houseItems=parseExpenseItems(parts);
+    const cleanDesc=desc.replace(/-\S+代$/,"").trim();
+    const hasAmt=desc.includes("$");
 
-    // 說明欄沒有金額標記時，整筆用 row.expense
-    const hasAmtInDesc=desc.includes("$");
-    if(!hasAmtInDesc||houseItems.every(i=>i.amount===0)){
+    if(!hasAmt){
       // 無金額標記：整筆一列借方
       lines.push({acctCode:"131450-01",custCode:code,dc:1,amount:amt,summary:desc});
     }else{
-      houseItems.forEach(item=>{
-        const hm=matchHousing(item.houseName);
-        const c=hm?hm.code:"";
-        lines.push({acctCode:"131450-01",custCode:c,dc:1,amount:item.amount,
-          summary:item.summary});
+      // 有金額標記：解析多房源
+      const items=parseExpenseItems(desc);
+      items.forEach(item=>{
+        const summary=item.descs.join("、");
+        lines.push({acctCode:"131450-01",custCode:item.code,dc:1,
+          amount:item.amt,summary});
       });
     }
 
+    // 匯費
     if(fee>0){
       lines.push({acctCode:"6270",custCode:"",dc:1,amount:fee,summary:"匯款手續費"});
     }
 
+    // 貸方：多房源時客供商空白
     const isStaff=/代$/.test(desc.trim());
-    const totalAmt=hasAmtInDesc&&!houseItems.every(i=>i.amount===0)
-      ?houseItems.reduce((s,i)=>s+i.amount,0)+(fee||0)
-      :amt+(fee||0);
-    const allSummary=desc;
-    lines.push({acctCode:"1110-01",custCode:isStaff?"":code,dc:2,
-      amount:totalAmt,summary:allSummary});
+    const items2=hasAmt?parseExpenseItems(desc):[];
+    const multiHouse=items2.length>1;
+    const allSummary=hasAmt
+      ?items2.map(i=>i.descs.join("、")).join("、")
+      :desc;
+    const creditCode=multiHouse?"":isStaff?"":code;
+    lines.push({acctCode:"1110-01",custCode:creditCode,dc:2,
+      amount:amt+(fee||0),summary:allSummary});
   }
   return lines;
 }
 
 // 解析支出說明中的多房源項目和金額
 function parseExpenseItems(desc){
-  // 例如：「雙十－換臉盆落水頭$1500、板橋文昌24-馬桶落水皮$800」
-  const items=[];
-  let currentHouse="";
-  let currentItems=[];
-  let currentAmt=0;
+  // 去掉結尾的 -XXX代
+  const clean=desc.replace(/-\S+代$/,"").trim();
+  const segments=clean.split("、");
 
-  const segments=desc.split("、");
+  const items=[];
+  let curCode=null, curName="", curDescs=[], curAmt=0;
+
   segments.forEach(seg=>{
+    seg=seg.trim();
     // 抓金額
-    const amtMatch=seg.match(/\$(\d[\d,]*)/);
-    const amt=amtMatch?parseInt(amtMatch[1].replace(/,/g,"")):0;
+    const amtM=seg.match(/\$([\d,]+)/);
+    const amt=amtM?parseInt(amtM[1].replace(/,/g,"")):0;
     // 去掉金額
     const cleanSeg=seg.replace(/\$[\d,]+/g,"").trim();
-    // 嘗試比對房源
-    const hm=matchHousing(cleanSeg.split("-")[0].trim());
+    // 嘗試比對房源（第一個-之前）
+    const firstPart=cleanSeg.split("-")[0].trim();
+    const hm=matchHousing(firstPart);
+
     if(hm){
-      // 新房源：先存前一個
-      if(currentHouse&&currentAmt>0){
-        items.push({houseName:currentHouse,amount:currentAmt,
-          summary:currentItems.join("、")});
+      // 找到新房源：先存前一個
+      if(curCode!==null){
+        items.push({code:curCode,name:curName,descs:curDescs,amt:curAmt});
       }
-      currentHouse=hm.matchedName;
-      currentItems=[cleanSeg.replace(/^[^-]+-?/,"").trim()||cleanSeg];
-      currentAmt=amt;
+      curCode=hm.code;
+      curName=hm.matchedName;
+      const itemDesc=cleanSeg.slice(hm.matchedName.length).replace(/^[-\s]+/,"").trim();
+      curDescs=[itemDesc?`${curName}-${itemDesc}`:curName];
+      curAmt=amt;
     }else{
       // 同一房源的額外項目
-      currentItems.push(cleanSeg);
-      currentAmt+=amt;
+      curDescs.push(cleanSeg);
+      curAmt+=amt;
     }
   });
-  // 最後一個房源
-  if(currentHouse&&currentAmt>0){
-    items.push({houseName:currentHouse,amount:currentAmt,
-      summary:currentItems.join("、")});
+
+  if(curCode!==null){
+    items.push({code:curCode,name:curName,descs:curDescs,amt:curAmt});
   }
-  // 若完全找不到房源，整筆處理
+
+  // 若完全找不到房源，整筆一列
   if(!items.length){
     const totalAmt=segments.reduce((s,seg)=>{
-      const m=seg.match(/\$(\d[\d,]*)/);
+      const m=seg.match(/\$([\d,]+)/);
       return s+(m?parseInt(m[1].replace(/,/g,"")):0);
     },0);
-    items.push({houseName:"",amount:totalAmt||0,summary:desc});
+    items.push({code:"",name:"",descs:[desc],amt:totalAmt});
   }
   return items;
 }
