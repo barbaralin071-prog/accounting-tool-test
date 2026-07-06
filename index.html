@@ -2240,37 +2240,39 @@ function buildExpenseVoucherLines(row){
     lines.push({acctCode:"1110-01",custCode:code,dc:2,amount:amt,summary:desc});
 
   }else{
-    const cleanDesc=desc.replace(/-\S+代$/,"").trim();
     const hasAmt=desc.includes("$");
 
     if(!hasAmt){
       // 無金額標記：整筆一列借方
-      lines.push({acctCode:"131450-01",custCode:code,dc:1,amount:amt,summary:desc});
+      const cleanDesc=desc.replace(/-\S+代$/,"").trim();
+      lines.push({acctCode:"131450-01",custCode:code,dc:1,amount:amt,
+        summary:cleanDesc});
+      if(fee>0) lines.push({acctCode:"6270",custCode:"",dc:1,amount:fee,summary:"匯款手續費"});
+      const isStaff=/代$/.test(desc.trim());
+      lines.push({acctCode:"1110-01",custCode:isStaff?"":code,dc:2,
+        amount:amt+(fee||0),summary:cleanDesc});
     }else{
       // 有金額標記：解析多房源
       const items=parseExpenseItems(desc);
+      const multiHouse=items.length>1;
+
       items.forEach(item=>{
-        const summary=item.descs.join("、");
+        // 摘要：去掉金額標記
+        const summary=item.descs.join("、").replace(/\$[\d,]+/g,"").trim();
         lines.push({acctCode:"131450-01",custCode:item.code,dc:1,
           amount:item.amt,summary});
       });
-    }
 
-    // 匯費
-    if(fee>0){
-      lines.push({acctCode:"6270",custCode:"",dc:1,amount:fee,summary:"匯款手續費"});
-    }
+      if(fee>0) lines.push({acctCode:"6270",custCode:"",dc:1,amount:fee,summary:"匯款手續費"});
 
-    // 貸方：多房源時客供商空白
-    const isStaff=/代$/.test(desc.trim());
-    const items2=hasAmt?parseExpenseItems(desc):[];
-    const multiHouse=items2.length>1;
-    const allSummary=hasAmt
-      ?items2.map(i=>i.descs.join("、")).join("、")
-      :desc;
-    const creditCode=multiHouse?"":isStaff?"":code;
-    lines.push({acctCode:"1110-01",custCode:creditCode,dc:2,
-      amount:amt+(fee||0),summary:allSummary});
+      // 貸方：多房源時客供商空白，單房源同借方
+      const isStaff=/代$/.test(desc.trim());
+      const creditCode=multiHouse?"":isStaff?"":items[0]?.code||code;
+      const allSummary=items.map(i=>i.descs.join("、")).join("、")
+        .replace(/\$[\d,]+/g,"").trim();
+      lines.push({acctCode:"1110-01",custCode:creditCode,dc:2,
+        amount:amt+(fee||0),summary:allSummary});
+    }
   }
   return lines;
 }
@@ -2302,8 +2304,8 @@ function parseExpenseItems(desc){
       }
       curCode=hm.code;
       curName=hm.matchedName;
-      const itemDesc=cleanSeg.slice(hm.matchedName.length).replace(/^[-\s]+/,"").trim();
-      curDescs=[itemDesc?`${curName}-${itemDesc}`:curName];
+      // 摘要：完整的 cleanSeg（去掉金額但保留項目描述）
+      curDescs=[cleanSeg];
       curAmt=amt;
     }else{
       // 同一房源的額外項目
