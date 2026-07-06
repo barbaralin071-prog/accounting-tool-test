@@ -511,9 +511,9 @@ button.btn.ghost:hover{background:var(--accent-soft);}
             <div class="dropzone" id="fang-3rd-dz-income">
               <div class="dz-icon">📥</div>
               <div class="dz-label">上傳收入傳票檔</div>
-              <div class="dz-hint">傳票匯入_房管處_YYYY-MM-DD.xlsx</div>
+              <div class="dz-hint">可選多份，傳票匯入_房管處_YYYY-MM-DD.xlsx</div>
             </div>
-            <input type="file" id="fang-3rd-file-income" accept=".xlsx" hidden>
+            <input type="file" id="fang-3rd-file-income" accept=".xlsx" multiple hidden>
           </div>
         </div>
         <div class="upload-row" style="grid-template-columns:1fr 1fr;margin-top:12px;">
@@ -521,9 +521,9 @@ button.btn.ghost:hover{background:var(--accent-soft);}
             <div class="dropzone" id="fang-3rd-dz-expense">
               <div class="dz-icon">📤</div>
               <div class="dz-label">上傳支出傳票檔</div>
-              <div class="dz-hint">傳票匯入_支出_YYYY-MM-DD.xlsx（選填）</div>
+              <div class="dz-hint">可選多份，傳票匯入_支出_YYYY-MM-DD.xlsx（選填）</div>
             </div>
-            <input type="file" id="fang-3rd-file-expense" accept=".xlsx" hidden>
+            <input type="file" id="fang-3rd-file-expense" accept=".xlsx" multiple hidden>
           </div>
           <div>
             <div class="dropzone" id="fang-3rd-dz-invoice">
@@ -2714,19 +2714,61 @@ let fang3rdState={
   results:[]
 };
 
-["cashflow","income","expense","invoice"].forEach(key=>{
+["cashflow","invoice"].forEach(key=>{
   bindDropzone(`fang-3rd-dz-${key}`,`fang-3rd-file-${key}`,async(file,dz)=>{
     try{
       const data=await readFile(file);
       if(key==="cashflow") fang3rdState.cashflow=parseCashflowForThird(data);
-      else if(key==="income") fang3rdState.income=parseVoucherXlsx(data);
-      else if(key==="expense") fang3rdState.expense=parseVoucherXlsx(data);
       else if(key==="invoice") fang3rdState.invoice=parseFangInvoiceXlsx(data);
       dz.classList.add("loaded");
       dz.querySelector(".dz-label").textContent="✓ "+file.name;
     }catch(e){ showErr("fang-3rd-err",e.message); }
     updateFang3rdMatchBtn();
   });
+});
+
+// 收入傳票：支援多份
+document.getElementById("fang-3rd-dz-income").addEventListener("click",()=>
+  document.getElementById("fang-3rd-file-income").click());
+document.getElementById("fang-3rd-file-income").addEventListener("change",async(e)=>{
+  const files=Array.from(e.target.files);
+  if(!files.length) return;
+  try{
+    const allRows=[];
+    for(const file of files){
+      const data=await readFile(file);
+      const rows=parseVoucherXlsx(data);
+      allRows.push(...rows);
+    }
+    fang3rdState.income=allRows;
+    const dz=document.getElementById("fang-3rd-dz-income");
+    dz.classList.add("loaded");
+    dz.querySelector(".dz-label").textContent=
+      files.length>1?`✓ ${files.length} 份收入傳票（共${allRows.length}筆）`:"✓ "+files[0].name;
+  }catch(e){ showErr("fang-3rd-err",e.message); }
+  updateFang3rdMatchBtn();
+});
+
+// 支出傳票：支援多份
+document.getElementById("fang-3rd-dz-expense").addEventListener("click",()=>
+  document.getElementById("fang-3rd-file-expense").click());
+document.getElementById("fang-3rd-file-expense").addEventListener("change",async(e)=>{
+  const files=Array.from(e.target.files);
+  if(!files.length) return;
+  try{
+    const allRows=[];
+    for(const file of files){
+      const data=await readFile(file);
+      const rows=parseVoucherXlsx(data);
+      allRows.push(...rows);
+    }
+    fang3rdState.expense=allRows;
+    const dz=document.getElementById("fang-3rd-dz-expense");
+    dz.classList.add("loaded");
+    dz.querySelector(".dz-label").textContent=
+      files.length>1?`✓ ${files.length} 份支出傳票（共${allRows.length}筆）`:"✓ "+files[0].name;
+  }catch(e){ showErr("fang-3rd-err",e.message); }
+  updateFang3rdMatchBtn();
 });
 
 function updateFang3rdMatchBtn(){
@@ -2821,7 +2863,8 @@ document.getElementById("fang-3rd-btn-reset").addEventListener("click",()=>{
     const labels={cashflow:"上傳金流表",income:"上傳收入傳票檔",
       expense:"上傳支出傳票檔",invoice:"上傳電子發票"};
     dz.querySelector(".dz-label").textContent=labels[key];
-    document.getElementById(`fang-3rd-file-${key}`).value="";
+    const fi=document.getElementById(`fang-3rd-file-${key}`);
+    if(fi) fi.value="";
   });
   document.getElementById("fang-3rd-result").hidden=true;
   document.getElementById("fang-3rd-btn-match").disabled=true;
