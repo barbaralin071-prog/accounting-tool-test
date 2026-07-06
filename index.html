@@ -2178,36 +2178,31 @@ function parseExpenseCashflowXlsx(data){
     const ws=wb.Sheets[sheetName];
     const aoa=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null});
 
-    // debug：看前3列
-    console.log(`=== ${sheetName} ===`);
-    aoa.slice(0,3).forEach((r,i)=>console.log(`[${i}]`,JSON.stringify(r)));
-
-    const hi=aoa.findIndex(r=>r&&r.some(c=>c==="說明")&&r.some(c=>c==="支出"));
-    if(hi===-1){console.log(`${sheetName}: 找不到標題`); return;}
+    // 找標題列：只需含「支出」欄位即可
+    const hi=aoa.findIndex(r=>r&&r.some(c=>c==="支出"));
+    if(hi===-1) return;
 
     const headers=aoa[hi];
-    const iDesc=headers.findIndex(h=>h==="說明");
+    // 說明欄：找「說明」，找不到就用 col 1（金流表說明通常在第二欄）
+    const iDescByName=headers.findIndex(h=>h==="說明");
+    const iDesc=iDescByName>=0?iDescByName:1;
     const iOrderNo=headers.findIndex(h=>h==="單號");
     const iExpense=headers.findIndex(h=>h==="支出");
     const iFee=headers.findIndex(h=>h==="匯費");
 
-    console.log(`標題列index: ${hi}, iDesc:${iDesc}, iExpense:${iExpense}`);
-
-    aoa.slice(hi+1).forEach((r,ri)=>{
-      if(ri<2) console.log(`資料列[${ri}]:`, JSON.stringify(r?.slice(0,7)));
+    aoa.slice(hi+1).forEach(r=>{
       const rawDesc=r[iDesc]?String(r[iDesc]):"";
       const desc=rawDesc.replace(/_x000d_/g," ").replace(/[\r\n]+/g," ").replace(/(\d)\s+(\d)/g,"$1$2").replace(/\s+/g," ").trim();
       const orderNo=iOrderNo>=0&&r[iOrderNo]?String(r[iOrderNo]).trim():"";
       const expense=iExpense>=0&&r[iExpense]?Number(r[iExpense]):null;
       const fee=iFee>=0&&r[iFee]?Number(r[iFee]):0;
       if(!expense||isNaN(expense)||expense<=0) return;
-      // 說明空白時用單號代替
       const finalDesc=desc||orderNo||"（無說明）";
       allRows.push({desc:finalDesc, orderNo, expense, fee:isNaN(fee)?0:fee, sheet:sheetName});
     });
   });
 
-  if(!allRows.length) throw new Error("找不到支出資料，請確認是支出金流表格式");
+  if(!allRows.length) throw new Error("找不到支出資料，請確認金流表含「支出」欄位");
   return allRows;
 }
 
