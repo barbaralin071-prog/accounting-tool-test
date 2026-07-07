@@ -542,14 +542,24 @@ button.btn.ghost:hover{background:var(--accent-soft);}
 
       <!-- 比對結果預覽 -->
       <div id="fang-3rd-result" hidden>
-        <div class="tbl-wrap">
-          <table>
-            <thead><tr>
-              <th>#</th><th>房源</th><th>屋主支出</th>
-              <th>收入傳票筆數</th><th>支出傳票筆數</th><th>電子發票</th><th>狀態</th>
-            </tr></thead>
-            <tbody id="fang-3rd-tb"></tbody>
-          </table>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 18px;border-bottom:1px solid var(--border);cursor:pointer;"
+          onclick="const tb=document.getElementById('fang-3rd-tb-wrap');const icon=document.getElementById('fang-3rd-toggle');tb.hidden=!tb.hidden;icon.textContent=tb.hidden?'▶':'▼';">
+          <div style="font-size:13px;font-weight:600;">
+            <span id="fang-3rd-toggle">▶</span>
+            　明細預覽（點擊收合／展開）
+          </div>
+          <div id="fang-3rd-summary-line" style="font-size:12.5px;color:var(--ink-soft);"></div>
+        </div>
+        <div id="fang-3rd-tb-wrap" hidden>
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr>
+                <th>#</th><th>房源</th><th>屋主支出</th>
+                <th>收入傳票筆數</th><th>支出傳票筆數</th><th>電子發票</th><th>狀態</th>
+              </tr></thead>
+              <tbody id="fang-3rd-tb"></tbody>
+            </table>
+          </div>
         </div>
       </div>
 
@@ -2275,20 +2285,31 @@ function buildExpenseVoucherLines(row){
         amount:amt+(fee||0),summary:allSummary});
     }
   }
+
+  // 借貸平衡檢查
+  const debitTotal=lines.filter(l=>l.dc===1).reduce((s,l)=>s+(l.amount||0),0);
+  const creditTotal=lines.filter(l=>l.dc===2).reduce((s,l)=>s+(l.amount||0),0);
+  if(Math.abs(debitTotal-creditTotal)>0){
+    lines.push({acctCode:"⚠",custCode:"",dc:0,amount:0,
+      summary:`【借貸不平衡】借方${debitTotal}≠貸方${creditTotal}，差額${debitTotal-creditTotal}，請查明`});
+  }
+
   return lines;
 }
 
 // 解析支出說明中的多房源項目和金額
 function parseExpenseItems(desc){
-  // 去掉結尾的 -XXX代
-  const clean=desc.replace(/-\S+代$/,"").trim();
+  // 去掉換行符、去掉結尾的 -XXX代
+  const clean=desc.replace(/[\r\n]+/g,"").replace(/-\S+代$/,"").trim();
   const segments=clean.split("、");
+  console.log("parseExpenseItems 段數:", segments.length, segments.map(s=>s.trim().slice(0,15)));
 
   const items=[];
   let curCode=null, curName="", curDescs=[], curAmt=0;
 
   segments.forEach(seg=>{
-    seg=seg.trim();
+    seg=seg.trim(); // 去掉前後空白（處理換行後有空格的情況）
+    if(!seg) return;
     // 抓金額
     const amtM=seg.match(/\$([\d,]+)/);
     const amt=amtM?parseInt(amtM[1].replace(/,/g,"")):0;
@@ -2296,7 +2317,7 @@ function parseExpenseItems(desc){
     const cleanSeg=seg.replace(/\$[\d,]+/g,"").trim();
     // 嘗試比對房源（第一個-之前）
     const firstPart=cleanSeg.split("-")[0].trim();
-    const hm=matchHousing(firstPart);
+    const hm=firstPart?matchHousing(firstPart):null;
 
     if(hm){
       // 找到新房源：先存前一個
@@ -2305,12 +2326,11 @@ function parseExpenseItems(desc){
       }
       curCode=hm.code;
       curName=hm.matchedName;
-      // 摘要：完整的 cleanSeg（去掉金額但保留項目描述）
       curDescs=[cleanSeg];
       curAmt=amt;
     }else{
-      // 同一房源的額外項目
-      curDescs.push(cleanSeg);
+      // 同一房源的額外項目（或無金額項目）
+      if(cleanSeg) curDescs.push(cleanSeg);
       curAmt+=amt;
     }
   });
@@ -2825,6 +2845,10 @@ document.getElementById("fang-3rd-btn-match").addEventListener("click",()=>{
 
 function renderFang3rdResult(){
   document.getElementById("fang-3rd-result").hidden=false;
+  // 預設收合
+  document.getElementById("fang-3rd-tb-wrap").hidden=true;
+  document.getElementById("fang-3rd-toggle").textContent="▶";
+
   const tb=document.getElementById("fang-3rd-tb");
   tb.innerHTML="";
   let rowNum=0;
@@ -2850,8 +2874,9 @@ function renderFang3rdResult(){
 
   const total=fang3rdState.results.reduce((s,r)=>
     s+r.houseResults.filter(h=>h.incomeLines.length>0).length,0);
-  document.getElementById("fang-3rd-bal").textContent=
-    `共 ${rowNum} 個房源，${total} 個可產出傳票`;
+  const summaryText=`共 ${rowNum} 個房源，${total} 個可產出傳票`;
+  document.getElementById("fang-3rd-bal").textContent=summaryText;
+  document.getElementById("fang-3rd-summary-line").textContent=summaryText;
   document.getElementById("fang-3rd-btn-download").disabled=total===0;
 }
 
