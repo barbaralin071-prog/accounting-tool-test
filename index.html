@@ -2255,7 +2255,8 @@ function buildExpenseVoucherLines(row){
 
     if(!hasAmt){
       // 無金額標記：整筆一列借方
-      const cleanDesc=desc.replace(/-\S+代$/,"").trim();
+      // 只去掉最後的「-姓名代」（最後一個-之後到結尾）
+      const cleanDesc=desc.replace(/-[^-、，]+代$/,"").trim();
       lines.push({acctCode:"131450-01",custCode:code,dc:1,amount:amt,
         summary:cleanDesc});
       if(fee>0) lines.push({acctCode:"6270",custCode:"",dc:1,amount:fee,summary:"匯款手續費"});
@@ -2268,10 +2269,16 @@ function buildExpenseVoucherLines(row){
       const multiHouse=items.length>1;
 
       items.forEach(item=>{
-        // 摘要：去掉金額標記
+        // 如果這筆金額是0，用總支出減其他項目加總
+        let itemAmt=item.amt;
+        if(itemAmt===0){
+          const sumOthers=items.filter(i=>i!==item).reduce((s,i)=>s+i.amt,0);
+          itemAmt=amt-sumOthers;
+          if(itemAmt<0) itemAmt=0;
+        }
         const summary=item.descs.join("、").replace(/\$[\d,]+/g,"").trim();
         lines.push({acctCode:"131450-01",custCode:item.code,dc:1,
-          amount:item.amt,summary});
+          amount:itemAmt,summary});
       });
 
       if(fee>0) lines.push({acctCode:"6270",custCode:"",dc:1,amount:fee,summary:"匯款手續費"});
@@ -2300,7 +2307,7 @@ function buildExpenseVoucherLines(row){
 // 解析支出說明中的多房源項目和金額
 function parseExpenseItems(desc){
   // 去掉換行符、去掉結尾的 -XXX代
-  const clean=desc.replace(/[\r\n]+/g,"").replace(/-\S+代$/,"").trim();
+  const clean=desc.replace(/[\r\n]+/g,"").replace(/-[^-、，]+代$/,"").trim();
   const segments=clean.split("、");
 
   const items=[];
