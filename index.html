@@ -2276,7 +2276,7 @@ function buildExpenseVoucherLines(row){
           itemAmt=amt-sumOthers;
           if(itemAmt<0) itemAmt=0;
         }
-        const summary=item.descs.join("、").replace(/\$[\d,]+/g,"").trim();
+        const summary=item.descs.join("、").replace(/\$[\d,]+/g,"").replace(/-+$/,"").trim();
         lines.push({acctCode:"131450-01",custCode:item.code,dc:1,
           amount:itemAmt,summary});
       });
@@ -2287,7 +2287,7 @@ function buildExpenseVoucherLines(row){
       const isStaff=/代$/.test(desc.trim());
       const creditCode=multiHouse?"":isStaff?"":items[0]?.code||code;
       const allSummary=items.map(i=>i.descs.join("、")).join("、")
-        .replace(/\$[\d,]+/g,"").trim();
+        .replace(/\$[\d,]+/g,"").replace(/-+\s*(?=、|$)/g,"").trim();
       lines.push({acctCode:"1110-01",custCode:creditCode,dc:2,
         amount:amt+(fee||0),summary:allSummary});
     }
