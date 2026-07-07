@@ -2381,8 +2381,20 @@ document.getElementById("fang-pay-btn-voucher").addEventListener("click",()=>{
     console.log(`[${i}] expense:${r.expense} fee:${r.fee} desc:${r.desc?.slice(0,30)}`));
 
   fangPayVoucherState.rows.forEach(row=>{
-    const lines=buildExpenseVoucherLines(row);
-    lines.forEach(line=>{
+    // 業務勞報特殊邏輯（戶名-租賃服務）
+    if(row.isBizLabor){
+      const s1=row.desc;
+      const ym=row.rocDateStr?row.rocDateStr.replace(/\//g,"").slice(0,5):"";
+      const s2=`${row.desc}-${ym}扣繳`;
+      rows.push([115,"DEFAULT",3,"","PENDING","",1,row.expense,s1]);
+      if(row.expense>20000){
+        const withhold=Math.round(row.expense*0.1);
+        rows.push([115,"DEFAULT",3,"","PENDING","",2,withhold,s2]);
+      }
+      return;
+    }
+    const vLines=buildExpenseVoucherLines(row);
+    vLines.forEach(line=>{
       rows.push([115,"DEFAULT",3,"",
         line.acctCode,line.custCode,line.dc,line.amount,line.summary]);
     });
@@ -2436,9 +2448,20 @@ function parseReqXlsx(data){
     let rocDateStr="";
     try{ rocDateStr=toRoc(payDate).str; }catch(e){}
 
+    // 判斷是否有地址（含縣市關鍵字）
+    const CITY_KEYS=["台北市","新北市","台中市","台南市","高雄市","桃園市","基隆市","新竹市","嘉義市","新竹縣","苗栗縣","彰化縣","南投縣","雲林縣","嘉義縣","屏東縣","宜蘭縣","花蓮縣","台東縣","澎湖縣","金門縣","連江縣"];
+    const hasAddress=CITY_KEYS.some(k=>note.includes(k));
+    const reqType=String(r[25]||"").trim();
+    const accountName=String(r[23]||"").trim(); // 戶名 col 23
+
+    // 業務勞報且無地址 → 說明改為「戶名-租賃服務」
+    const isBizLabor=reqType==="業務勞報"&&!hasAddress;
+
     // 說明欄組成
     let desc=note;
-    if(isStaffAdvance(receiver)){
+    if(isBizLabor){
+      desc=`${accountName}-租賃服務`;
+    }else if(isStaffAdvance(receiver)){
       const staffName=extractStaffName(receiver);
       desc=`${note}-${staffName}代`;
     }
@@ -2449,8 +2472,8 @@ function parseReqXlsx(data){
     const transferFee=noFee?0:15;
 
     return{source:"請款單",orderNo:String(r[0]||"").trim(),rocDateStr:"",desc,amount,transferFee,
-      reqType:String(r[25]||"").trim(),   // 請款類型 col 25
-      receiver:String(r[3]||"").trim(),   // 收款人名稱 col 3
+      reqType,accountName,isBizLabor,
+      receiver:String(r[3]||"").trim(),
       raw:r};
   }).filter(r=>r.amount>0);
 }
