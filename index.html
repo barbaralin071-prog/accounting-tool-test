@@ -2371,17 +2371,65 @@ bindDropzone("fang-pay-dz-voucher","fang-pay-file-voucher",async(file,dz)=>{
   }catch(e){ showErr("fang-pay-voucher-err",e.message); }
 });
 
+// 解析屋主租金相關說明
+function parseOwnerRentDesc(desc){
+  const clean=desc.replace(/[\r\n]+/g," ").trim();
+  const houseName=clean.split("-")[0].trim();
+  const houseMatch=matchHousing(houseName);
+  const code=houseMatch?houseMatch.code:"";
+  const ymM=clean.match(/(\d{5})/);
+  const ym=ymM?ymM[1]:"";
+  const ownerM=clean.match(/屋主([^扣二\s-]+)/);
+  const ownerName=ownerM?ownerM[1].trim():"";
+  const isWithhold=clean.includes("扣繳");
+  const is2ndHealth=clean.includes("二代健保");
+  const isMain=clean.includes("屋主")&&clean.includes("租金")&&!isWithhold&&!is2ndHealth;
+  return{houseName,code,ym,ownerName,isMain,isWithhold,is2ndHealth};
+}
+
 document.getElementById("fang-pay-btn-voucher").addEventListener("click",()=>{
   const HEADERS=["年度","傳票號碼","傳票種類","日期","科目代號","客戶供應商代號","借/貸","金額","長摘要"];
   const rows=[HEADERS];
 
-  console.log("=== 支出傳票 debug ===");
-  console.log("筆數:", fangPayVoucherState.rows.length);
-  fangPayVoucherState.rows.slice(0,3).forEach((r,i)=>
-    console.log(`[${i}] expense:${r.expense} fee:${r.fee} desc:${r.desc?.slice(0,30)}`));
-
+  // 分組：屋主租金 vs 一般支出
+  const ownerRows=[];
+  const normalRows=[];
   fangPayVoucherState.rows.forEach(row=>{
-    // 業務勞報特殊邏輯（戶名-租賃服務）
+    const d=row.desc||"";
+    if(d.includes("屋主")&&(d.includes("租金")||d.includes("扣繳")||d.includes("二代健保"))){
+      ownerRows.push(row);
+    }else{
+      normalRows.push(row);
+    }
+  });
+
+  // 屋主租金分組（同房源+同年月+同屋主）
+  const ownerGroups=new Map();
+  ownerRows.forEach(row=>{
+    const info=parseOwnerRentDesc(row.desc);
+    const key=`${info.houseName}|${info.ym}|${info.ownerName}`;
+    if(!ownerGroups.has(key)) ownerGroups.set(key,[]);
+    ownerGroups.get(key).push({row,info});
+  });
+
+  ownerGroups.forEach((items)=>{
+    const main=items.find(i=>i.info.isMain);
+    const withhold=items.find(i=>i.info.isWithhold);
+    const health=items.find(i=>i.info.is2ndHealth);
+    if(!main) return;
+    const{houseName,code,ym}=main.info;
+    const totalAmt=(main.row.expense||0)+(withhold?.row.expense||0)+(health?.row.expense||0);
+    const mainFee=main.row.fee||0;
+    const summary5990=`${houseName}-${ym}租金`;
+    rows.push([115,"DEFAULT",3,"","5990-01",code,1,totalAmt,summary5990]);
+    if(mainFee>0) rows.push([115,"DEFAULT",3,"","6270","",1,mainFee,"匯款手續費"]);
+    rows.push([115,"DEFAULT",3,"","1110-01",code,2,main.row.expense,main.row.desc]);
+    if(withhold) rows.push([115,"DEFAULT",3,"","1110-01",code,2,withhold.row.expense,withhold.row.desc]);
+    if(health) rows.push([115,"DEFAULT",3,"","1110-01",code,2,health.row.expense,health.row.desc]);
+  });
+
+  // 一般支出
+  normalRows.forEach(row=>{
     if(row.isBizLabor){
       const s1=row.desc;
       const ym=row.rocDateStr?row.rocDateStr.replace(/\//g,"").slice(0,5):"";
