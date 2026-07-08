@@ -2384,7 +2384,10 @@ function parseOwnerRentDesc(desc){
   const isWithhold=clean.includes("扣繳");
   const is2ndHealth=clean.includes("二代健保");
   const isMain=clean.includes("屋主")&&clean.includes("租金")&&!isWithhold&&!is2ndHealth;
-  return{houseName,code,ym,ownerName,isMain,isWithhold,is2ndHealth};
+  // 判斷是否為完整地址格式
+  const CITY_KEYS=["台北市","新北市","台中市","台南市","高雄市","桃園市","基隆市","新竹市","嘉義市","新竹縣","苗栗縣","彰化縣","南投縣","雲林縣","嘉義縣","屏東縣","宜蘭縣","花蓮縣","台東縣","澎湖縣","金門縣","連江縣"];
+  const isFullAddr=CITY_KEYS.some(k=>clean.startsWith(k));
+  return{houseName,code,ym,ownerName,isMain,isWithhold,is2ndHealth,isFullAddr};
 }
 
 document.getElementById("fang-pay-btn-voucher").addEventListener("click",()=>{
@@ -2417,15 +2420,28 @@ document.getElementById("fang-pay-btn-voucher").addEventListener("click",()=>{
     const withhold=items.find(i=>i.info.isWithhold);
     const health=items.find(i=>i.info.is2ndHealth);
     if(!main) return;
-    const{houseName,code,ym}=main.info;
-    const totalAmt=(main.row.expense||0)+(withhold?.row.expense||0)+(health?.row.expense||0);
+    const{houseName,code,ym,isFullAddr}=main.info;
     const mainFee=main.row.fee||0;
-    const summary5990=`${houseName}-${ym}租金`;
-    rows.push([115,"DEFAULT",3,"","5990-01",code,1,totalAmt,summary5990]);
-    if(mainFee>0) rows.push([115,"DEFAULT",3,"","6270","",1,mainFee,"匯款手續費"]);
-    rows.push([115,"DEFAULT",3,"","1110-01",code,2,main.row.expense,main.row.desc]);
-    if(withhold) rows.push([115,"DEFAULT",3,"","1110-01",code,2,withhold.row.expense,withhold.row.desc]);
-    if(health) rows.push([115,"DEFAULT",3,"","1110-01",code,2,health.row.expense,health.row.desc]);
+
+    if(isFullAddr){
+      // 完整地址格式：131450-01 借1 / 1110-01 貸2，客供商固定53939912
+      const FIXED_CODE="53939912";
+      const totalAmt=(main.row.expense||0)+(withhold?.row.expense||0)+(health?.row.expense||0);
+      rows.push([115,"DEFAULT",3,"","131450-01",FIXED_CODE,1,main.row.expense,main.row.desc]);
+      if(mainFee>0) rows.push([115,"DEFAULT",3,"","6270","",1,mainFee,"匯款手續費"]);
+      rows.push([115,"DEFAULT",3,"","1110-01",FIXED_CODE,2,main.row.expense+mainFee,main.row.desc]);
+      if(withhold) rows.push([115,"DEFAULT",3,"","131450-01",FIXED_CODE,1,withhold.row.expense,withhold.row.desc]);
+      if(health) rows.push([115,"DEFAULT",3,"","131450-01",FIXED_CODE,1,health.row.expense,health.row.desc]);
+    }else{
+      // 一般房源格式：5990-01 借1 三筆加總 / 1110-01 貸2 各自
+      const totalAmt=(main.row.expense||0)+(withhold?.row.expense||0)+(health?.row.expense||0);
+      const summary5990=`${houseName}-${ym}租金`;
+      rows.push([115,"DEFAULT",3,"","5990-01",code,1,totalAmt,summary5990]);
+      if(mainFee>0) rows.push([115,"DEFAULT",3,"","6270","",1,mainFee,"匯款手續費"]);
+      rows.push([115,"DEFAULT",3,"","1110-01",code,2,main.row.expense,main.row.desc]);
+      if(withhold) rows.push([115,"DEFAULT",3,"","1110-01",code,2,withhold.row.expense,withhold.row.desc]);
+      if(health) rows.push([115,"DEFAULT",3,"","1110-01",code,2,health.row.expense,health.row.desc]);
+    }
   });
 
   // 一般支出
