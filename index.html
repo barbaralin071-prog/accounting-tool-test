@@ -2394,13 +2394,16 @@ document.getElementById("fang-pay-btn-voucher").addEventListener("click",()=>{
   const HEADERS=["年度","傳票號碼","傳票種類","日期","科目代號","客戶供應商代號","借/貸","金額","長摘要"];
   const rows=[HEADERS];
 
-  // 分組：屋主租金 vs 一般支出
+  // 分組：屋主租金 vs 業務勞報 vs 一般支出
   const ownerRows=[];
+  const bizLaborRows=[];
   const normalRows=[];
   fangPayVoucherState.rows.forEach(row=>{
     const d=row.desc||"";
     if(d.includes("屋主")&&(d.includes("租金")||d.includes("扣繳")||d.includes("二代健保"))){
       ownerRows.push(row);
+    }else if(row.isBizLabor||d.includes("租賃服務")||(d.includes("扣繳")&&!d.includes("屋主"))){
+      bizLaborRows.push(row);
     }else{
       normalRows.push(row);
     }
@@ -2444,19 +2447,33 @@ document.getElementById("fang-pay-btn-voucher").addEventListener("click",()=>{
     }
   });
 
-  // 一般支出
+  // 業務勞報分組（同戶名）
+  const bizLaborGroups=new Map();
+  bizLaborRows.forEach(row=>{
+    const d=row.desc||"";
+    // 戶名 = 第一個「-」之前
+    const accountName=d.split("-")[0].trim();
+    const isWithhold=d.includes("扣繳");
+    const key=accountName;
+    if(!bizLaborGroups.has(key)) bizLaborGroups.set(key,[]);
+    bizLaborGroups.get(key).push({row,isWithhold,accountName});
+  });
+
+  bizLaborGroups.forEach((items)=>{
+    const main=items.find(i=>!i.isWithhold);
+    const withhold=items.find(i=>i.isWithhold);
+    if(!main) return;
+    const totalAmt=(main.row.expense||0)+(withhold?.row.expense||0);
+    const summary=main.row.desc;
+    // 借方：5990-031 加總
+    rows.push([115,"DEFAULT",3,"","5990-031","",1,totalAmt,summary]);
+    // 貸方：各自分開
+    rows.push([115,"DEFAULT",3,"","1110-01","",2,main.row.expense,main.row.desc]);
+    if(withhold) rows.push([115,"DEFAULT",3,"","1110-01","",2,withhold.row.expense,withhold.row.desc]);
+  });
+
+  // 一般支出（修繕、退押金、廠商請款等）
   normalRows.forEach(row=>{
-    if(row.isBizLabor){
-      const s1=row.desc;
-      const ym=row.rocDateStr?row.rocDateStr.replace(/\//g,"").slice(0,5):"";
-      const s2=`${row.desc}-${ym}扣繳`;
-      rows.push([115,"DEFAULT",3,"","PENDING","",1,row.expense,s1]);
-      if(row.expense>20000){
-        const withhold=Math.round(row.expense*0.1);
-        rows.push([115,"DEFAULT",3,"","PENDING","",2,withhold,s2]);
-      }
-      return;
-    }
     const vLines=buildExpenseVoucherLines(row);
     vLines.forEach(line=>{
       rows.push([115,"DEFAULT",3,"",
