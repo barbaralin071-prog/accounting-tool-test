@@ -3095,7 +3095,10 @@ document.getElementById("fang-3rd-file-expense").addEventListener("change",async
 });
 
 function updateFang3rdMatchBtn(){
-  const canDownload=!!(fang3rdState.cashflow&&fang3rdState.invoice);
+  const hasCashflow=fang3rdState.cashflow!=null;
+  const hasInvoice=fang3rdState.invoice!=null&&fang3rdState.invoice.length>0;
+  const canDownload=hasCashflow&&hasInvoice;
+  console.log(`updateFang3rdMatchBtn: cashflow=${hasCashflow} invoice=${hasInvoice} canDownload=${canDownload}`);
   document.getElementById("fang-3rd-btn-download").disabled=!canDownload;
   const topBtn=document.getElementById("fang-3rd-btn-download-top");
   if(topBtn) topBtn.disabled=!canDownload;
