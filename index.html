@@ -536,7 +536,7 @@ button.btn.ghost:hover{background:var(--accent-soft);}
         </div>
         <div class="errbox" id="fang-3rd-err"></div>
         <div style="display:flex;justify-content:flex-end;margin-top:8px;">
-          <button class="btn primary" id="fang-3rd-btn-match" disabled>開始比對</button>
+          <button class="btn primary" id="fang-3rd-btn-download-top" disabled>下載沖帳傳票匯入檔</button>
         </div>
       </div>
 
@@ -3091,58 +3091,21 @@ document.getElementById("fang-3rd-file-expense").addEventListener("change",async
 });
 
 function updateFang3rdMatchBtn(){
-  // 金流表+電子發票就可以下載（不需要比對）
   const canDownload=!!(fang3rdState.cashflow&&fang3rdState.invoice);
-  document.getElementById("fang-3rd-btn-match").disabled=!canDownload;
   document.getElementById("fang-3rd-btn-download").disabled=!canDownload;
+  const topBtn=document.getElementById("fang-3rd-btn-download-top");
+  if(topBtn) topBtn.disabled=!canDownload;
 }
 
-document.getElementById("fang-3rd-btn-match").addEventListener("click",()=>{
-  clearErr("fang-3rd-err");
-  const results=[];
-
-  fang3rdState.cashflow.forEach(cfRow=>{
-    // 從說明抓年月（5位數字，例如11506）
-    const ymMatch=cfRow.desc.match(/(\d{5})/);
-    const yearMonth=ymMatch?ymMatch[1]:"";
-
-    // 每個房源各自比對
-    const houseResults=cfRow.houses.map(h=>{
-      const{houseName,code}=h;
-
-      // 雙重比對：客供商代號 OR 摘要包含房源名稱，同時比對年月
-      const matchLine=(r,dc)=>{
-        const codeMatch=code&&r.custCode===code;
-        const nameMatch=r.summary.includes(houseName);
-        const ymOk=!yearMonth||r.summary.includes(yearMonth);
-        return r.dc===dc&&(codeMatch||nameMatch)&&ymOk;
-      };
-
-      // 收入傳票：找同房源的貸方（dc=2），排除 1110-01（借方科目）
-      const incomeLines=(fang3rdState.income||[]).filter(r=>
-        matchLine(r,2)&&r.acctCode!=="1110-01");
-      // 支出傳票：找同房源的借方（dc=1），排除屋主撥款那筆
-      const expenseLines=(fang3rdState.expense||[]).filter(r=>
-        matchLine(r,1)&&!r.summary.includes("屋主")&&r.acctCode!=="1110-01");
-
-      const invoices=(fang3rdState.invoice||[]).filter(inv=>{
-        const m=matchHousing(inv.caseName);
-        const codeMatch=m&&m.code===code;
-        const nameMatch=inv.caseName.includes(houseName)||
-          houseName.includes(inv.caseName);
-        const ymOk=!yearMonth||inv.yearMonth===yearMonth;
-        return (codeMatch||nameMatch)&&ymOk;
-      });
-
-      return{houseName, code, incomeLines, expenseLines, invoices};
-    });
-
-    results.push({cfRow:{...cfRow,yearMonth}, houseResults});
+// 上方下載按鈕觸發同樣的下載
+const fang3rdTopBtn=document.getElementById("fang-3rd-btn-download-top");
+if(fang3rdTopBtn){
+  fang3rdTopBtn.addEventListener("click",()=>{
+    document.getElementById("fang-3rd-btn-download").click();
   });
+}
 
-  fang3rdState.results=results;
-  renderFang3rdResult();
-});
+;
 
 function renderFang3rdResult(){
   document.getElementById("fang-3rd-result").hidden=false;
@@ -3178,7 +3141,6 @@ function renderFang3rdResult(){
   const summaryText=`共 ${rowNum} 個房源，${total} 個可產出傳票`;
   document.getElementById("fang-3rd-bal").textContent=summaryText;
   document.getElementById("fang-3rd-summary-line").textContent=summaryText;
-  document.getElementById("fang-3rd-btn-download").disabled=total===0;
 }
 
 document.getElementById("fang-3rd-btn-reset").addEventListener("click",()=>{
@@ -3193,7 +3155,6 @@ document.getElementById("fang-3rd-btn-reset").addEventListener("click",()=>{
     if(fi) fi.value="";
   });
   document.getElementById("fang-3rd-result").hidden=true;
-  document.getElementById("fang-3rd-btn-match").disabled=true;
   document.getElementById("fang-3rd-btn-download").disabled=true;
   document.getElementById("fang-3rd-bal").textContent="—";
   clearErr("fang-3rd-err");
