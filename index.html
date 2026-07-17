@@ -717,15 +717,26 @@ button.btn.ghost:hover{background:var(--accent-soft);}
             <div class="ms-lbl">⚠ 未比對到</div>
           </div>
         </div>
-        <div class="tbl-wrap">
-          <table>
-            <thead><tr>
-              <th>#</th><th>金流表說明</th><th class="right">金額</th>
-              <th>發票號碼</th><th>買受人</th>
-              <th class="right">未稅</th><th class="right">稅額</th><th>狀態</th>
-            </tr></thead>
-            <tbody id="biz-inv-tb"></tbody>
-          </table>
+        <!-- 收合/展開 -->
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 18px;border-bottom:1px solid var(--border);border-top:1px solid var(--border);cursor:pointer;"
+          onclick="const tb=document.getElementById('biz-inv-tb-wrap');const icon=document.getElementById('biz-inv-toggle');tb.hidden=!tb.hidden;icon.textContent=tb.hidden?'▶':'▼';">
+          <div style="font-size:13px;font-weight:600;">
+            <span id="biz-inv-toggle">▶</span>
+            　明細預覽（點擊收合／展開）
+          </div>
+          <div id="biz-inv-summary-line" style="font-size:12.5px;color:var(--ink-soft);"></div>
+        </div>
+        <div id="biz-inv-tb-wrap" hidden>
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr>
+                <th>#</th><th>金流表說明</th><th class="right">金額</th>
+                <th>發票號碼</th><th>買受人</th>
+                <th class="right">未稅</th><th class="right">稅額</th><th>狀態</th>
+              </tr></thead>
+              <tbody id="biz-inv-tb"></tbody>
+            </table>
+          </div>
         </div>
         <div class="actbar">
           <div class="bal" id="biz-inv-bal">—</div>
@@ -814,7 +825,7 @@ button.btn.ghost:hover{background:var(--accent-soft);}
 /* ══════════════════════════════════════
    內建資料
 ══════════════════════════════════════ */
-const HOUSING_DATA = [{"code": "AH1150703", "name": "敦煌80", "aliases": []}, {"code": "AH1150702", "name": "文林北254", "aliases": []}, {"code": "AH1150701", "name": "民生186", "aliases": []}, {"code": "AH1150606", "name": "中山2245", "aliases": []}, {"code": "AH1150605", "name": "昆明46", "aliases": []}, {"code": "AH1150604", "name": "延平北255", "aliases": []}, {"code": "AH1150603", "name": "新北大298", "aliases": ["新北大道298"]}, {"code": "AH1150602", "name": "和城262", "aliases": []}, {"code": "AH1150601", "name": "羅斯福269", "aliases": ["羅斯福路269"]}, {"code": "AH1150506", "name": "保健67", "aliases": []}, {"code": "AH1150505", "name": "南京250", "aliases": []}, {"code": "AH1150504", "name": "汀洲39", "aliases": []}, {"code": "AH1150503", "name": "信義127", "aliases": []}, {"code": "AH1150502", "name": "青年168-6", "aliases": []}, {"code": "AH1150501", "name": "青年168-5", "aliases": []}, {"code": "AH1150407", "name": "思源512", "aliases": []}, {"code": "AH1150406", "name": "寶興70(2F短租)", "aliases": []}, {"code": "AH1150405", "name": "信義235", "aliases": []}, {"code": "AH1150404", "name": "同安72", "aliases": []}, {"code": "AH1150403", "name": "民族219", "aliases": []}, {"code": "AH1150402", "name": "松勤9", "aliases": []}, {"code": "AH1150401", "name": "興南93", "aliases": []}, {"code": "AH1150305", "name": "中正223", "aliases": []}, {"code": "AH1150304", "name": "中和390", "aliases": []}, {"code": "AH1150303", "name": "八德182", "aliases": []}, {"code": "AH1150302", "name": "南京東368", "aliases": []}, {"code": "AH1150301", "name": "雙連23", "aliases": []}, {"code": "AH1150209", "name": "龍門191", "aliases": []}, {"code": "AH1150208", "name": "明水路539", "aliases": []}, {"code": "AH1150207", "name": "臨沂3", "aliases": []}, {"code": "AH1150206", "name": "民權東58-5", "aliases": []}, {"code": "AH1150205", "name": "福美街128", "aliases": []}, {"code": "AH1150204", "name": "興隆123", "aliases": []}, {"code": "AH1150203", "name": "忠孝東524", "aliases": []}, {"code": "AH1150202", "name": "承德292", "aliases": []}, {"code": "AH1150201", "name": "仁愛33", "aliases": []}, {"code": "AH1150102", "name": "承德116", "aliases": []}, {"code": "AH1150101", "name": "和平東55", "aliases": []}, {"code": "AH1141208", "name": "大安國宅1156", "aliases": []}, {"code": "AH1141207", "name": "環河241", "aliases": ["環河南241"]}, {"code": "AH1141206", "name": "合江144", "aliases": []}, {"code": "AH1141205", "name": "成都106", "aliases": []}, {"code": "AH1141204", "name": "錦州50-23", "aliases": []}, {"code": "AH1141203", "name": "中興37", "aliases": []}, {"code": "AH1141202", "name": "南港130", "aliases": []}, {"code": "AH1141201", "name": "光復南294", "aliases": []}, {"code": "AH1141103", "name": "環河西245", "aliases": []}, {"code": "AH1141102", "name": "羅斯福284", "aliases": []}, {"code": "AH1141101", "name": "天祥80", "aliases": []}, {"code": "AH1141003", "name": "明德333居所", "aliases": ["明德333"]}, {"code": "AH1141002", "name": "崇實63居所", "aliases": ["崇實63"]}, {"code": "AH1141001", "name": "羅斯福2", "aliases": []}, {"code": "AH1140904", "name": "新生北61", "aliases": []}, {"code": "AH1140903", "name": "宜安2", "aliases": []}, {"code": "AH1140902", "name": "大安居所", "aliases": []}, {"code": "AH1140804", "name": "南京東291", "aliases": []}, {"code": "AH1140803", "name": "雙城13", "aliases": []}, {"code": "AH1140802", "name": "艋舺120-5", "aliases": []}, {"code": "AH1140801", "name": "復興南132", "aliases": []}, {"code": "AH1140704", "name": "松江431", "aliases": []}, {"code": "AH1140703", "name": "通化88", "aliases": []}, {"code": "AH1140702", "name": "四平107", "aliases": []}, {"code": "AH1140701", "name": "健康178", "aliases": []}, {"code": "AH11406413", "name": "博愛25", "aliases": []}, {"code": "AH11406412", "name": "板橋香社56", "aliases": []}, {"code": "AH11406410", "name": "寶清5", "aliases": []}, {"code": "AH11406409", "name": "中山北96", "aliases": []}, {"code": "AH11406408", "name": "實踐93", "aliases": []}, {"code": "AH11406407", "name": "新店中華48", "aliases": []}, {"code": "AH11406406", "name": "承德69", "aliases": []}, {"code": "AH11406405", "name": "杭州南93", "aliases": []}, {"code": "AH11406404", "name": "成功193", "aliases": []}, {"code": "AH11406403", "name": "松山119", "aliases": []}, {"code": "AH11406402", "name": "華陰95", "aliases": []}, {"code": "AH11406401", "name": "南京東75", "aliases": []}, {"code": "AH11406400", "name": "康定232", "aliases": []}, {"code": "AH11406399", "name": "永和166", "aliases": []}, {"code": "AH11406398", "name": "集美197", "aliases": []}, {"code": "AH11406397", "name": "泰順40", "aliases": []}, {"code": "AH11406396", "name": "重陽125", "aliases": []}, {"code": "AH11406395", "name": "秀明112", "aliases": []}, {"code": "AH11406394", "name": "南京東108", "aliases": []}, {"code": "AH11406393", "name": "竹林39", "aliases": []}, {"code": "AH11406392", "name": "內湖91", "aliases": []}, {"code": "AH11406391", "name": "康樂48", "aliases": []}, {"code": "AH11406390", "name": "三重雙園1", "aliases": []}, {"code": "AH11406389", "name": "東湖119", "aliases": []}, {"code": "AH11406388", "name": "新府86", "aliases": []}, {"code": "AH11406387", "name": "艋舺120", "aliases": []}, {"code": "AH11406386", "name": "寶安37", "aliases": []}, {"code": "AH11406385", "name": "民權東103", "aliases": []}, {"code": "AH11406384", "name": "十四張381", "aliases": []}, {"code": "AH11406383", "name": "錦州30", "aliases": []}, {"code": "AH11406382", "name": "安居99", "aliases": []}, {"code": "AH11406381", "name": "秀明103", "aliases": []}, {"code": "AH11406380", "name": "板橋民生323", "aliases": []}, {"code": "AH11406379", "name": "忠孝東272", "aliases": []}, {"code": "AH11406378", "name": "成都155", "aliases": []}, {"code": "AH11406377", "name": "育英45", "aliases": []}, {"code": "AH11406376", "name": "忠孝東783", "aliases": []}, {"code": "AH11406375", "name": "蘆洲長安249", "aliases": []}, {"code": "AH11406374", "name": "文德22", "aliases": []}, {"code": "AH11406373", "name": "南京東45", "aliases": []}, {"code": "AH11406372", "name": "板橋合安25", "aliases": []}, {"code": "AH11406371", "name": "五分92", "aliases": []}, {"code": "AH11406370", "name": "北投知行228", "aliases": []}, {"code": "AH11406369", "name": "桂林6", "aliases": []}, {"code": "AH11406368", "name": "華固月河20 (A6-20)", "aliases": ["華固月河20"]}, {"code": "AH11406367", "name": "南京東53", "aliases": []}, {"code": "AH11406366", "name": "民生東56", "aliases": []}, {"code": "AH11406365", "name": "承德40", "aliases": []}, {"code": "AH11406364", "name": "汐止水源", "aliases": []}, {"code": "AH11406363", "name": "永貞437", "aliases": []}, {"code": "AH11406362", "name": "同安97", "aliases": []}, {"code": "AH11406361", "name": "和平西382", "aliases": []}, {"code": "AH11406360", "name": "民權東58", "aliases": []}, {"code": "AH11406359", "name": "泰順60", "aliases": []}, {"code": "AH11406358", "name": "文化90", "aliases": []}, {"code": "AH11406357", "name": "八德106", "aliases": []}, {"code": "AH11406356", "name": "建中48", "aliases": []}, {"code": "AH11406355", "name": "成都81", "aliases": []}, {"code": "AH11406354", "name": "信義317", "aliases": []}, {"code": "AH11406353", "name": "華江35", "aliases": []}, {"code": "AH11406352", "name": "東湖16", "aliases": []}, {"code": "AH11406351", "name": "安德52", "aliases": []}, {"code": "AH11406350", "name": "寶興70", "aliases": []}, {"code": "AH11406349", "name": "內湖737-5", "aliases": []}, {"code": "AH11406348", "name": "內湖737-4", "aliases": []}, {"code": "AH11406347", "name": "北新122", "aliases": []}, {"code": "AH11406346", "name": "樂業108", "aliases": []}, {"code": "AH11406345", "name": "辛亥222", "aliases": []}, {"code": "AH11406344", "name": "內湖323", "aliases": []}, {"code": "AH11406343", "name": "和平東363", "aliases": []}, {"code": "AH11406342", "name": "國光112", "aliases": []}, {"code": "AH11406341", "name": "民生東29", "aliases": []}, {"code": "AH11406340", "name": "萬盛68", "aliases": []}, {"code": "AH11406339", "name": "塔城44", "aliases": []}, {"code": "AH11406338", "name": "港墘57", "aliases": []}, {"code": "AH11406337", "name": "連城65", "aliases": []}, {"code": "AH11406336", "name": "重慶北47", "aliases": []}, {"code": "AH11406335", "name": "保慶6", "aliases": []}, {"code": "AH11406334", "name": "長安西45", "aliases": []}, {"code": "AH11406333", "name": "延吉68", "aliases": []}, {"code": "AH11406332", "name": "民生東80", "aliases": []}, {"code": "AH11406331", "name": "介壽106", "aliases": []}, {"code": "AH11406330", "name": "五常53", "aliases": []}, {"code": "AH11406329", "name": "北安595", "aliases": []}, {"code": "AH11406328", "name": "大安169", "aliases": []}, {"code": "AH11406327", "name": "吉林142", "aliases": []}, {"code": "AH11406326", "name": "信義147", "aliases": []}, {"code": "AH11406325", "name": "忠孝東206", "aliases": []}, {"code": "AH11406324", "name": "和平東95", "aliases": []}, {"code": "AH11406323", "name": "泰順50", "aliases": []}, {"code": "AH11406322", "name": "浦城6", "aliases": []}, {"code": "AH11406321", "name": "大安52", "aliases": []}, {"code": "AH11406320", "name": "和平東175", "aliases": []}, {"code": "AH11406319", "name": "和平東50", "aliases": []}, {"code": "AH11406318", "name": "基隆97", "aliases": []}, {"code": "AH11406317", "name": "羅斯福10", "aliases": []}, {"code": "AH11406316", "name": "景興195", "aliases": []}, {"code": "AH11406315", "name": "羅斯福202(901)", "aliases": []}, {"code": "AH11406314", "name": "中山北72", "aliases": []}, {"code": "AH11406313", "name": "五原19", "aliases": []}, {"code": "AH11406312", "name": "民生東147", "aliases": []}, {"code": "AH11406311", "name": "中山北137", "aliases": []}, {"code": "AH11406310", "name": "重慶北22", "aliases": []}, {"code": "AH11406309", "name": "中山北83", "aliases": []}, {"code": "AH11406308", "name": "晉江48", "aliases": []}, {"code": "AH11406307", "name": "汀州27", "aliases": []}, {"code": "AH11406305", "name": "晉江18", "aliases": []}, {"code": "AH11406304", "name": "同安93", "aliases": []}, {"code": "AH11406303", "name": "晉江19", "aliases": []}, {"code": "AH11406302", "name": "金門11", "aliases": []}, {"code": "AH11406301", "name": "羅斯福68", "aliases": []}, {"code": "AH11406300", "name": "汀州188", "aliases": []}, {"code": "AH11406299", "name": "萬大277", "aliases": []}, {"code": "AH11406298", "name": "興德76", "aliases": []}, {"code": "AH11406295", "name": "英士28", "aliases": []}, {"code": "AH11406294", "name": "景美147", "aliases": []}, {"code": "AH11406293", "name": "羅斯福176", "aliases": []}, {"code": "AH11406292", "name": "保平207", "aliases": []}, {"code": "AH11406291", "name": "文化366", "aliases": []}, {"code": "AH11406290", "name": "通化168", "aliases": []}, {"code": "AH11406289", "name": "景興153", "aliases": []}, {"code": "AH11406288", "name": "公館26", "aliases": []}, {"code": "AH11406287", "name": "長沙61", "aliases": []}, {"code": "AH11406286", "name": "和平東10", "aliases": []}, {"code": "AH11406285", "name": "臥龍4", "aliases": []}, {"code": "AH11406284", "name": "連勝38", "aliases": []}, {"code": "AH11406283", "name": "信義松山465", "aliases": []}, {"code": "AH11406282", "name": "和平東1", "aliases": []}, {"code": "AH11406281", "name": "松山204", "aliases": []}, {"code": "AH11406280", "name": "民生西232", "aliases": []}, {"code": "AH11406279", "name": "淡水中正12", "aliases": []}, {"code": "AH11406278", "name": "南京東303", "aliases": []}, {"code": "AH11406277", "name": "中坡北40", "aliases": []}, {"code": "AH11406276", "name": "信義53", "aliases": []}, {"code": "AH11406275", "name": "港墘37", "aliases": []}, {"code": "AH11406274", "name": "敦化南177", "aliases": []}, {"code": "AH11406273", "name": "中山北85", "aliases": []}, {"code": "AH1140502", "name": "瑞安23居所", "aliases": ["瑞安23"]}, {"code": "AH1140501", "name": "板橋文昌24居所", "aliases": []}, {"code": "AH1140401", "name": "三中145居所", "aliases": []}, {"code": "AH1140202", "name": "民生東112居所", "aliases": []}, {"code": "AH1140201", "name": "長春11居所", "aliases": []}, {"code": "AH1131203", "name": "中原33居所", "aliases": []}, {"code": "AH1131202", "name": "新巨蛋居所", "aliases": []}, {"code": "AH1131201", "name": "EAT9-5居所", "aliases": []}, {"code": "AH1131001", "name": "翡冷翠居所", "aliases": []}, {"code": "AH1130903", "name": "安居60居所", "aliases": []}, {"code": "AH1130902", "name": "忠孝783居所", "aliases": []}, {"code": "AH1130901", "name": "中和中2號居所", "aliases": []}, {"code": "AH1130805", "name": "中和復興居所", "aliases": []}, {"code": "AH1130804", "name": "中和勝利居所", "aliases": []}, {"code": "AH1130803", "name": "敦化100居所", "aliases": []}, {"code": "AH1130802", "name": "常殷至善園居所", "aliases": []}, {"code": "AH1130801", "name": "大安51居所", "aliases": []}, {"code": "AH1130602", "name": "雙園居所", "aliases": []}, {"code": "AH1130601", "name": "吉林142居所", "aliases": []}, {"code": "AH1130503", "name": "潤泰央北居所", "aliases": []}, {"code": "AH1130502", "name": "重慶居所", "aliases": []}, {"code": "AH1130473", "name": "雙十居所", "aliases": []}, {"code": "AH1130472", "name": "翡冷翠居所(舊)", "aliases": []}, {"code": "AH1130471", "name": "瑞安居所", "aliases": []}, {"code": "AH1130470", "name": "新生南居所", "aliases": []}, {"code": "AH1130468", "name": "象山居所", "aliases": []}, {"code": "AH1130467", "name": "通安居所", "aliases": []}, {"code": "AH1130466", "name": "美麗行館2號居所", "aliases": []}, {"code": "AH1130465", "name": "美麗行館1號居所(中山北53)", "aliases": []}, {"code": "AH1130464", "name": "昆明1010居所", "aliases": []}, {"code": "AH1130463", "name": "昆明0413居所", "aliases": []}, {"code": "AH1130462", "name": "延吉居所", "aliases": []}, {"code": "AH1130460", "name": "江翠居所", "aliases": []}, {"code": "AH1130459", "name": "四維居所", "aliases": []}, {"code": "AH1130458", "name": "中原居所", "aliases": []}, {"code": "AH1130457", "name": "大安居所(信義186)", "aliases": []}, {"code": "AH1130456", "name": "大安19居所", "aliases": []}, {"code": "AH1130455", "name": "八德居所", "aliases": []}, {"code": "AH1130452", "name": "品城西居所", "aliases": []}, {"code": "AH1130451", "name": "昆明0902居所", "aliases": []}, {"code": "AH1130450", "name": "敦煌居所", "aliases": []}, {"code": "AH1130449", "name": "偶戲館(八德106)居所", "aliases": []}, {"code": "AH1130448", "name": "芝山居所", "aliases": ["芝山"]}, {"code": "AH1130447", "name": "Imore居所", "aliases": []}, {"code": "AH1130446", "name": "長安東居所", "aliases": ["長安東"]}, {"code": "AH1130445", "name": "松機居所", "aliases": []}, {"code": "AH1130444", "name": "紅寶石居所", "aliases": []}, {"code": "AH1130443", "name": "北中居所", "aliases": []}, {"code": "AH1130442", "name": "民生東137居所", "aliases": []}, {"code": "AH1130441", "name": "南京三民居所", "aliases": []}, {"code": "AH1130440", "name": "大橋頭居所", "aliases": []}, {"code": "AH1130439", "name": "小北居所", "aliases": []}, {"code": "AH1130437", "name": "昆明1207居所", "aliases": []}, {"code": "AH1130436", "name": "西門1號居所", "aliases": []}, {"code": "AH1130435", "name": "新巨蛋居所(舊)", "aliases": []}, {"code": "AH1130434", "name": "實踐居所", "aliases": []}, {"code": "AH1130433", "name": "光灧居所", "aliases": []}, {"code": "AH1130432", "name": "戀戀居所", "aliases": []}, {"code": "AH1130431", "name": "大安192居所", "aliases": []}, {"code": "AH1130430", "name": "幸福居所", "aliases": []}, {"code": "AH1130429", "name": "文聖居所", "aliases": []}, {"code": "AH1130428", "name": "南勢角居所", "aliases": []}, {"code": "AH1130427", "name": "景華20居所", "aliases": []}, {"code": "AH1130426", "name": "敦化2號居所", "aliases": []}, {"code": "AH1130425", "name": "學士居所", "aliases": []}, {"code": "AH1130424", "name": "萬芳居所", "aliases": []}, {"code": "AH1130422", "name": "璞真仰睦居所", "aliases": []}, {"code": "AH1130421", "name": "樂華居所", "aliases": []}, {"code": "AH1130420", "name": "永愛居所", "aliases": []}, {"code": "AH1130419", "name": "永和樂居所", "aliases": []}, {"code": "AH1130418", "name": "中和中居所", "aliases": []}, {"code": "AH1130417", "name": "忠孝251居所", "aliases": []}, {"code": "AH1130416", "name": "圓山居所", "aliases": []}, {"code": "AH1130415", "name": "通化180居所", "aliases": []}, {"code": "AH1130414", "name": "古亭居所", "aliases": []}, {"code": "AH1130413", "name": "西門2號居所", "aliases": []}, {"code": "AH1130412", "name": "中正879居所", "aliases": []}, {"code": "AH1130411", "name": "通化39居所", "aliases": []}, {"code": "AH1130410", "name": "敦化1號居所", "aliases": []}, {"code": "AH1130409", "name": "何必館居所", "aliases": []}, {"code": "AH1130408", "name": "尚林苑居所", "aliases": []}, {"code": "AH1130407", "name": "景興居所", "aliases": []}, {"code": "AH1130406", "name": "成福居所", "aliases": []}, {"code": "AH1130405", "name": "中正614居所", "aliases": []}, {"code": "AH1130404", "name": "永吉278居所", "aliases": []}, {"code": "AH1130403", "name": "保安居所", "aliases": []}, {"code": "AH1130402", "name": "小室哲哉居所", "aliases": []}, {"code": "AH1130401", "name": "弘道居所", "aliases": []}];
+const HOUSING_DATA = [{"code":"AH1150705","name":"成都159","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1150704","name":"辛亥77","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1150703","name":"敦煌80","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1150702","name":"文林北254","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1150701","name":"民生186","aliases":[],"service":"合作拆帳-HC","rentMode":"短租管理","deptNo":""}, {"code":"AH1150606","name":"中山2245","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1150605","name":"昆明46","aliases":[],"service":"包租-B","rentMode":"短租管理","deptNo":"001"}, {"code":"AH1150604","name":"延平北255","aliases":[],"service":"合作拆帳-HC","rentMode":"短租管理","deptNo":""}, {"code":"AH1150603","name":"新北大298","aliases":["新北大道298"],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1150602","name":"和城262","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1150601","name":"羅斯福269","aliases":["羅斯福路269"],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1150506","name":"保健67","aliases":[],"service":"合作拆帳-HC","rentMode":"短租管理","deptNo":""}, {"code":"AH1150505","name":"南京東250","aliases":[],"service":"包租-B","rentMode":"短租管理","deptNo":"001"}, {"code":"AH1150504","name":"汀洲39","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1150503","name":"信義127","aliases":[],"service":"包租-B","rentMode":"短租管理","deptNo":"001"}, {"code":"AH1150502","name":"青年168-6","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1150501","name":"青年168-5","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1150407","name":"思源512","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1150406","name":"寶興70(2F短租)","aliases":[],"service":"合作拆帳-HC","rentMode":"短租管理","deptNo":""}, {"code":"AH1150405","name":"信義235","aliases":[],"service":"包租-B","rentMode":"短租管理","deptNo":"001"}, {"code":"AH1150404","name":"同安72","aliases":[],"service":"包租-B","rentMode":"短租管理","deptNo":"001"}, {"code":"AH1150403","name":"民族219","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1150402","name":"松勤9","aliases":[],"service":"包租-B","rentMode":"短租管理","deptNo":"001"}, {"code":"AH1150401","name":"興南93","aliases":[],"service":"合作拆帳-HC","rentMode":"短租管理","deptNo":""}, {"code":"AH1150305","name":"中正223","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1150304","name":"中和390","aliases":[],"service":"包租-B","rentMode":"短租管理","deptNo":"001"}, {"code":"AH1150303","name":"八德182","aliases":[],"service":"包租-B","rentMode":"","deptNo":""}, {"code":"AH1150302","name":"南京東368","aliases":[],"service":"合作拆帳-HC","rentMode":"短租管理","deptNo":""}, {"code":"AH1150301","name":"雙連23","aliases":[],"service":"包租-B","rentMode":"短租管理","deptNo":"001"}, {"code":"AH1150209","name":"龍門191","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1150208","name":"明水539","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1150207","name":"臨沂3","aliases":[],"service":"包租-B","rentMode":"短租管理","deptNo":"001"}, {"code":"AH1150206","name":"民權東58-5","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1150205","name":"福美街128","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1150204","name":"興隆123","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1150203","name":"忠孝東524","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1150202","name":"承德292","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1150201","name":"仁愛33","aliases":[],"service":"包租-B","rentMode":"短租管理","deptNo":"001"}, {"code":"AH1150102","name":"承德116","aliases":[],"service":"包租-B","rentMode":"短租管理","deptNo":"001"}, {"code":"AH1150101","name":"和平東55","aliases":[],"service":"包租-B","rentMode":"短租管理","deptNo":"001"}, {"code":"AH1141208","name":"大安國宅1156","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1141207","name":"環河241","aliases":["環河南241"],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1141206","name":"合江144","aliases":[],"service":"包租-B","rentMode":"短租管理","deptNo":"001"}, {"code":"AH1141205","name":"成都106","aliases":[],"service":"包租-B","rentMode":"短租管理","deptNo":"001"}, {"code":"AH1141204","name":"錦州50-23","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1141203","name":"中興37","aliases":[],"service":"包租-B","rentMode":"短租管理","deptNo":"001"}, {"code":"AH1141202","name":"南港130","aliases":[],"service":"包租-B","rentMode":"短租管理","deptNo":"001"}, {"code":"AH1141201","name":"光復南294","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1141103","name":"環河西245","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1141102","name":"羅斯福284","aliases":[],"service":"包租-B","rentMode":"年租管理","deptNo":"002"}, {"code":"AH1141101","name":"天祥80","aliases":[],"service":"合作拆帳-HC","rentMode":"短租管理","deptNo":""}, {"code":"AH1141003","name":"明德333","aliases":["明德333"],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1141002","name":"崇實63","aliases":["崇實63"],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1141001","name":"羅斯福2","aliases":[],"service":"包租-B","rentMode":"短租管理","deptNo":"001"}, {"code":"AH1140904","name":"新生北61","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1140903","name":"宜安2","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1140804","name":"南京東291","aliases":[],"service":"包租-B","rentMode":"短租管理","deptNo":"001"}, {"code":"AH1140803","name":"雙城13","aliases":[],"service":"代管-D","rentMode":"","deptNo":""}, {"code":"AH1140802","name":"艋舺120-5","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1140801","name":"復興南132","aliases":[],"service":"合作拆帳-HC","rentMode":"短租管理","deptNo":""}, {"code":"AH1140704","name":"松江431","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1140703","name":"通化88","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1140702","name":"四平107","aliases":[],"service":"包租-B","rentMode":"短租管理","deptNo":"001"}, {"code":"AH1140701","name":"健康178","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406413","name":"博愛25","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406412","name":"板橋香社56","aliases":[],"service":"代管-D","rentMode":"","deptNo":""}, {"code":"AH11406410","name":"寶清5","aliases":[],"service":"代管-D","rentMode":"","deptNo":""}, {"code":"AH11406409","name":"中山北96","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406408","name":"實踐93","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406407","name":"新店中華48","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406406","name":"承德69","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406405","name":"杭州南93","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406404","name":"成功193","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406403","name":"松山119","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406402","name":"華陰95","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406401","name":"南京東75","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406400","name":"康定232","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406399","name":"永和166","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406398","name":"集美197","aliases":[],"service":"代管-D","rentMode":"","deptNo":""}, {"code":"AH11406397","name":"泰順40","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406396","name":"重陽125","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406395","name":"秀明112","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406394","name":"南京東108","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406393","name":"竹林39","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406392","name":"內湖91","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406391","name":"康樂48","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406390","name":"三重雙園1","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406389","name":"東湖119","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406388","name":"新府86","aliases":[],"service":"代管-D","rentMode":"","deptNo":""}, {"code":"AH11406387","name":"艋舺120","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406386","name":"寶安37","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406385","name":"民權東103","aliases":[],"service":"代管-D","rentMode":"","deptNo":""}, {"code":"AH11406384","name":"十四張381","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406383","name":"錦州30","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406382","name":"安居99","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406381","name":"秀明103","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406380","name":"板橋民生323","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406379","name":"忠孝東272","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406378","name":"成都155","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406377","name":"育英45","aliases":[],"service":"代管-D","rentMode":"","deptNo":""}, {"code":"AH11406376","name":"忠孝東783","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406375","name":"蘆洲長安249","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406374","name":"文德22","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406373","name":"南京東45","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406372","name":"板橋合安25","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406371","name":"五分92","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406370","name":"北投知行228","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406369","name":"桂林6","aliases":[],"service":"代管-D","rentMode":"","deptNo":""}, {"code":"AH11406368","name":"華固月河20","aliases":["華固月河20"],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406367","name":"南京東53","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406366","name":"民生東56","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406365","name":"承德40","aliases":[],"service":"代管-D","rentMode":"","deptNo":""}, {"code":"AH11406364","name":"汐止水源","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406363","name":"永貞437","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406362","name":"同安97","aliases":[],"service":"包租-B","rentMode":"短租管理","deptNo":"001"}, {"code":"AH11406361","name":"和平西382","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406360","name":"民權東58","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406359","name":"泰順60","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406358","name":"文化90","aliases":[],"service":"代管-D","rentMode":"","deptNo":""}, {"code":"AH11406357","name":"八德106","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406356","name":"建中48","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406355","name":"成都81","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406354","name":"信義317","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406353","name":"華江35","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406352","name":"東湖16","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406351","name":"安德52","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406350","name":"寶興70","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406349","name":"內湖737-5","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406348","name":"內湖737-4","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406347","name":"北新122","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406346","name":"樂業108","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406345","name":"辛亥222","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406344","name":"內湖323","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406343","name":"和平東363","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406342","name":"國光112","aliases":[],"service":"代管-D","rentMode":"","deptNo":""}, {"code":"AH11406341","name":"民生東29","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406340","name":"萬盛68","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406339","name":"塔城44","aliases":[],"service":"代管-D","rentMode":"","deptNo":""}, {"code":"AH11406338","name":"港墘57","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406337","name":"連城65","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406336","name":"重慶北47","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406335","name":"保慶6","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406334","name":"長安西45","aliases":[],"service":"代管-D","rentMode":"","deptNo":""}, {"code":"AH11406333","name":"延吉68","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406332","name":"民生東80","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406331","name":"介壽106","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406330","name":"五常53","aliases":[],"service":"代管-D","rentMode":"","deptNo":""}, {"code":"AH11406329","name":"北安595","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406328","name":"大安169","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406327","name":"吉林142","aliases":[],"service":"合作拆帳-HC","rentMode":"短租管理","deptNo":""}, {"code":"AH11406326","name":"信義147","aliases":[],"service":"包租-B","rentMode":"短租管理","deptNo":"001"}, {"code":"AH11406325","name":"忠孝東206","aliases":[],"service":"包租-B","rentMode":"短租管理","deptNo":"001"}, {"code":"AH11406324","name":"和平東95","aliases":[],"service":"包租-B","rentMode":"短租管理","deptNo":"001"}, {"code":"AH11406323","name":"泰順50","aliases":[],"service":"包租-B","rentMode":"短租管理","deptNo":"001"}, {"code":"AH11406322","name":"浦城6","aliases":[],"service":"包租-B","rentMode":"短租管理","deptNo":"001"}, {"code":"AH11406321","name":"大安52","aliases":[],"service":"合作拆帳-HC","rentMode":"短租管理","deptNo":""}, {"code":"AH11406320","name":"和平東175","aliases":[],"service":"包租-B","rentMode":"短租管理","deptNo":"001"}, {"code":"AH11406319","name":"和平東50","aliases":[],"service":"代管-D","rentMode":"","deptNo":""}, {"code":"AH11406318","name":"基隆97","aliases":[],"service":"合作拆帳-HC","rentMode":"短租管理","deptNo":""}, {"code":"AH11406317","name":"羅斯福10","aliases":[],"service":"包租-B","rentMode":"短租管理","deptNo":"001"}, {"code":"AH11406316","name":"景興195","aliases":[],"service":"包租-B","rentMode":"短租管理","deptNo":"001"}, {"code":"AH11406315","name":"羅斯福202(901)","aliases":[],"service":"包租-B","rentMode":"短租管理","deptNo":"001"}, {"code":"AH11406314","name":"中山北72","aliases":[],"service":"合作拆帳-HC","rentMode":"短租管理","deptNo":""}, {"code":"AH11406313","name":"五原19","aliases":[],"service":"包租-B","rentMode":"短租管理","deptNo":"001"}, {"code":"AH11406312","name":"民生東147","aliases":[],"service":"包租-B","rentMode":"短租管理","deptNo":"001"}, {"code":"AH11406311","name":"中山北137","aliases":[],"service":"包租-B","rentMode":"短租管理","deptNo":"001"}, {"code":"AH11406310","name":"重慶北22","aliases":[],"service":"包租-B","rentMode":"短租管理","deptNo":"001"}, {"code":"AH11406309","name":"中山北83","aliases":[],"service":"包租-B","rentMode":"短租管理","deptNo":"001"}, {"code":"AH11406308","name":"晉江48","aliases":[],"service":"包租-B","rentMode":"短租管理","deptNo":"001"}, {"code":"AH11406307","name":"汀州27","aliases":[],"service":"合作拆帳-HC","rentMode":"短租管理","deptNo":""}, {"code":"AH11406305","name":"晉江18","aliases":[],"service":"包租-B","rentMode":"短租管理","deptNo":"001"}, {"code":"AH11406304","name":"同安93","aliases":[],"service":"包租-B","rentMode":"短租管理","deptNo":"001"}, {"code":"AH11406303","name":"晉江19","aliases":[],"service":"包租-B","rentMode":"短租管理","deptNo":"001"}, {"code":"AH11406302","name":"金門11","aliases":[],"service":"包租-B","rentMode":"短租管理","deptNo":"001"}, {"code":"AH11406301","name":"羅斯福68","aliases":[],"service":"包租-B","rentMode":"短租管理","deptNo":"001"}, {"code":"AH11406300","name":"汀州188","aliases":[],"service":"包租-B","rentMode":"短租管理","deptNo":"001"}, {"code":"AH11406299","name":"萬大277","aliases":[],"service":"合作拆帳-HC","rentMode":"短租管理","deptNo":""}, {"code":"AH11406298","name":"興德76","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406295","name":"英士28","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406294","name":"景美147","aliases":[],"service":"包租-B","rentMode":"短租管理","deptNo":"001"}, {"code":"AH11406293","name":"羅斯福176","aliases":[],"service":"包租-B","rentMode":"短租管理","deptNo":"001"}, {"code":"AH11406292","name":"保平207","aliases":[],"service":"包租-B","rentMode":"短租管理","deptNo":"001"}, {"code":"AH11406291","name":"文化366","aliases":[],"service":"合作拆帳-HC","rentMode":"","deptNo":""}, {"code":"AH11406290","name":"通化168","aliases":[],"service":"包租-B","rentMode":"短租管理","deptNo":"001"}, {"code":"AH11406289","name":"景興153","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406288","name":"公館26","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406287","name":"長沙61","aliases":[],"service":"合作拆帳-HC","rentMode":"短租管理","deptNo":""}, {"code":"AH11406286","name":"和平東10","aliases":[],"service":"合作拆帳-HC","rentMode":"短租管理","deptNo":""}, {"code":"AH11406285","name":"臥龍4","aliases":[],"service":"包租-B","rentMode":"年租管理","deptNo":"002"}, {"code":"AH11406284","name":"連勝38","aliases":[],"service":"代管-D","rentMode":"","deptNo":""}, {"code":"AH11406283","name":"信義松山465","aliases":[],"service":"包租-B","rentMode":"短租管理","deptNo":"001"}, {"code":"AH11406282","name":"和平東1","aliases":[],"service":"包租-B","rentMode":"短租管理","deptNo":"001"}, {"code":"AH11406281","name":"松山204","aliases":[],"service":"包租-B","rentMode":"短租管理","deptNo":"001"}, {"code":"AH11406280","name":"民生西232","aliases":[],"service":"合作拆帳-HC","rentMode":"短租管理","deptNo":""}, {"code":"AH11406279","name":"淡水中正12","aliases":[],"service":"合作拆帳-HC","rentMode":"短租管理","deptNo":""}, {"code":"AH11406278","name":"南京東303","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406277","name":"中坡北40","aliases":[],"service":"合作拆帳-HC","rentMode":"短租管理","deptNo":""}, {"code":"AH11406276","name":"信義53","aliases":[],"service":"包租-B","rentMode":"短租管理","deptNo":"001"}, {"code":"AH11406275","name":"港墘37","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH11406274","name":"敦化南177","aliases":[],"service":"合作拆帳-HC","rentMode":"短租管理","deptNo":""}, {"code":"AH11406273","name":"中山北85","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1140502","name":"瑞安23","aliases":["瑞安23"],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1140501","name":"板橋文昌24居所","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1140401","name":"三中145居所","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1140202","name":"民生東112居所","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1140201","name":"長春11居所","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1131203","name":"中原33居所","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1131202","name":"新巨蛋居所","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1131201","name":"EAT9-5居所","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1131001","name":"翡冷翠居所","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1130903","name":"安居60居所","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1130902","name":"忠孝783居所","aliases":[],"service":"代管-D","rentMode":"","deptNo":""}, {"code":"AH1130901","name":"中和中2號居所","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1130805","name":"中和復興居所","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1130804","name":"中和勝利居所","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1130803","name":"敦化100居所","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1130802","name":"常殷至善園居所","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1130801","name":"大安51居所","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1130602","name":"雙園居所","aliases":[],"service":"包租-B","rentMode":"年租管理","deptNo":"002"}, {"code":"AH1130601","name":"吉林142居所","aliases":[],"service":"代管-D","rentMode":"","deptNo":""}, {"code":"AH1130503","name":"潤泰央北居所","aliases":[],"service":"代管-D","rentMode":"","deptNo":""}, {"code":"AH1130502","name":"重慶居所","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1130473","name":"雙十居所","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1130472","name":"翡冷翠居所(舊)","aliases":[],"service":"代管-D","rentMode":"","deptNo":""}, {"code":"AH1130471","name":"瑞安居所","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1130470","name":"新生南居所","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1130468","name":"象山居所","aliases":[],"service":"代管-D","rentMode":"","deptNo":""}, {"code":"AH1130467","name":"通安居所","aliases":[],"service":"代管-D","rentMode":"","deptNo":""}, {"code":"AH1130466","name":"美麗行館2號居所","aliases":[],"service":"包租-B","rentMode":"年租管理","deptNo":"002"}, {"code":"AH1130465","name":"美麗行館1號居所(中山北53)","aliases":[],"service":"包租-B","rentMode":"短租管理","deptNo":"001"}, {"code":"AH1130464","name":"昆明1010居所","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1130463","name":"昆明0413居所","aliases":[],"service":"代管-D","rentMode":"","deptNo":""}, {"code":"AH1130462","name":"延吉居所","aliases":[],"service":"包租-B","rentMode":"","deptNo":""}, {"code":"AH1130460","name":"江翠居所","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1130459","name":"四維居所","aliases":[],"service":"代管-D","rentMode":"","deptNo":""}, {"code":"AH1130458","name":"中原居所","aliases":[],"service":"包租-B","rentMode":"","deptNo":""}, {"code":"AH1130457","name":"大安居所(信義186)","aliases":[],"service":"包租-B","rentMode":"短租管理","deptNo":"001"}, {"code":"AH1130456","name":"大安19居所","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1130455","name":"八德居所","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1130452","name":"品城西居所","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1130451","name":"昆明0902居所","aliases":[],"service":"代管-D","rentMode":"","deptNo":""}, {"code":"AH1130450","name":"敦煌居所","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1130449","name":"偶戲館(八德106)居所","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1130448","name":"芝山居所","aliases":["芝山"],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1130447","name":"Imore居所","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1130446","name":"長安東居所","aliases":["長安東"],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1130445","name":"松機居所","aliases":[],"service":"代管-D","rentMode":"","deptNo":""}, {"code":"AH1130444","name":"紅寶石居所","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1130443","name":"北中居所","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1130442","name":"民生東137居所","aliases":[],"service":"代管-D","rentMode":"","deptNo":""}, {"code":"AH1130441","name":"南京三民居所","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1130440","name":"大橋頭居所","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1130439","name":"小北居所","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1130437","name":"昆明1207居所","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1130436","name":"西門1號居所","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1130435","name":"新巨蛋居所(舊)","aliases":[],"service":"代管-D","rentMode":"","deptNo":""}, {"code":"AH1130434","name":"實踐居所","aliases":[],"service":"代管-D","rentMode":"","deptNo":""}, {"code":"AH1130433","name":"光灧居所","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1130432","name":"戀戀居所","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1130431","name":"大安192居所","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1130430","name":"幸福居所","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1130429","name":"文聖居所","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1130428","name":"南勢角居所","aliases":[],"service":"代管-D","rentMode":"","deptNo":""}, {"code":"AH1130427","name":"景華20居所","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1130426","name":"敦化2號居所","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1130425","name":"學士居所","aliases":[],"service":"代管-D","rentMode":"","deptNo":""}, {"code":"AH1130424","name":"萬芳居所","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1130422","name":"璞真仰睦居所","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1130421","name":"樂華居所","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1130420","name":"永愛居所","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1130419","name":"永和樂居所","aliases":[],"service":"代管-D","rentMode":"","deptNo":""}, {"code":"AH1130418","name":"中和中居所","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1130417","name":"忠孝251居所","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1130416","name":"圓山居所","aliases":[],"service":"代管-D","rentMode":"","deptNo":""}, {"code":"AH1130415","name":"通化180居所","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1130414","name":"古亭居所","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1130413","name":"西門2號居所","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1130412","name":"中正879居所","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1130411","name":"通化39居所","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1130410","name":"敦化1號居所","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1130409","name":"何必館居所","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1130408","name":"尚林苑居所","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1130407","name":"景興居所","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1130406","name":"成福居所","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1130405","name":"中正614居所","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1130404","name":"永吉278居所","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1130403","name":"保安居所","aliases":[],"service":"包租-B","rentMode":"年租管理","deptNo":"002"}, {"code":"AH1130402","name":"小室哲哉居所","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}, {"code":"AH1130401","name":"弘道居所","aliases":[],"service":"代管-D","rentMode":"年租管理","deptNo":""}];
 // HOUSING_SORTED 已在下方 matchHousing 區塊定義
 
 function pad2(n){return String(n).padStart(2,'0');}
@@ -867,6 +878,16 @@ const ACCOUNTS = {
 /* ══════════════════════════════════════
    工具函式
 ══════════════════════════════════════ */
+
+// 今日民國日期
+function todayRoc(){
+  const d=new Date();
+  const y=d.getFullYear()-1911;
+  const m=String(d.getMonth()+1).padStart(2,"0");
+  const day=String(d.getDate()).padStart(2,"0");
+  return `${y}/${m}/${day}`;
+}
+const TODAY_ROC=todayRoc();
 function toRoc(raw){
   let y,m,d;
   if(raw instanceof Date){y=raw.getFullYear();m=raw.getMonth()+1;d=raw.getDate();}
@@ -909,9 +930,10 @@ function ragicLast5(code){
 // 建立比對清單：把每筆房源的主名稱和別名都展開成獨立比對項目，按長度降序
 const HOUSING_MATCH_LIST = [];
 HOUSING_DATA.forEach(h=>{
-  HOUSING_MATCH_LIST.push({code:h.code, matchKey:h.name});
+  const meta={code:h.code,service:h.service||"",rentMode:h.rentMode||"",deptNo:h.deptNo||""};
+  HOUSING_MATCH_LIST.push({...meta, matchKey:h.name});
   (h.aliases||[]).forEach(alias=>{
-    HOUSING_MATCH_LIST.push({code:h.code, matchKey:alias});
+    HOUSING_MATCH_LIST.push({...meta, matchKey:alias});
   });
 });
 HOUSING_MATCH_LIST.sort((a,b)=>b.matchKey.length-a.matchKey.length);
@@ -920,17 +942,16 @@ const HOUSING_SORTED = HOUSING_MATCH_LIST; // 保留相容性
 
 function matchHousing(name){
   const n=String(name).trim();
-  // 先精確比對（含別名）
   for(const h of HOUSING_MATCH_LIST){
     if(n.startsWith(h.matchKey))
-      return{code:h.code, matchedName:h.matchKey, remainder:n.slice(h.matchKey.length)};
+      return{code:h.code, matchedName:h.matchKey, remainder:n.slice(h.matchKey.length),
+        service:h.service, rentMode:h.rentMode, deptNo:h.deptNo};
   }
-  // 再嘗試「金流表沒有居所，資料庫有居所」的情況
-  // 例如金流表「安居60」→ 資料庫「安居60居所」
   for(const h of HOUSING_MATCH_LIST){
     const keyWithout=h.matchKey.replace(/居所.*$/,"").trim();
     if(keyWithout.length>=2 && n.startsWith(keyWithout))
-      return{code:h.code, matchedName:keyWithout, remainder:n.slice(keyWithout.length)};
+      return{code:h.code, matchedName:keyWithout, remainder:n.slice(keyWithout.length),
+        service:h.service, rentMode:h.rentMode, deptNo:h.deptNo};
   }
   return null;
 }
@@ -1361,6 +1382,11 @@ function parseCashflowXlsx(data){
     const dateCell=r[0]?String(r[0]).replace(/\s*★\s*/g,"").trim():"";
     if(dateCell && /\d+月\d+日/.test(dateCell)){
       currentDate=dateCell;
+    }else if(r[0] instanceof Date||typeof r[0]==="number"){
+      try{
+        const roc=toRoc(r[0]);
+        currentDate=`${roc.year}/${pad2(roc.month)}/${pad2(roc.day)}`;
+      }catch(e){}
     }
 
     // 說明欄（第1欄），清除換行符和多餘空白
@@ -1398,8 +1424,11 @@ function extractYearMonth(desc){
 function buildVoucherFromCashflowDesc(desc, amount, date, rocYear, options={}){
   const d=desc.replace(/[\r\n]+/g," ").replace(/\s+/g," ").trim();
   const houseName=d.split("-")[0].trim();
-  const houseMatch=matchHousing(houseName);
-  const code=houseMatch?houseMatch.code:houseName;
+  // 先嘗試含房號的比對（例如「內湖737-5」）
+  const hm=matchHousing(d.split("-")[0].trim())||matchHousing(d.split("-").slice(0,2).join("-").trim());
+  const code=hm?hm.code:"";
+  const deptNo=hm?hm.deptNo||"":"";
+  const isPackage=hm&&hm.service==="包租-B";
   const lines=[];
 
   function grabAmt(pattern){
@@ -1408,12 +1437,56 @@ function buildVoucherFromCashflowDesc(desc, amount, date, rocYear, options={}){
   }
 
   const hasDeposit=d.includes("押金");
+  const hasEarnest=d.includes("定金");
   const hasRent=d.includes("租金");
   const hasService=d.includes("服務費");
   const hasMgmt=d.includes("代管費");
   const hasAdvance=d.includes("代墊款");
+  const hasPettyCash=d.includes("零用金");
+  const hasSplit=d.includes("合拆");
 
-  if(hasAdvance){
+  if(hasPettyCash){
+    // 零用金
+    lines.push({acctCode:"1110-01",custCode:"",dc:1,amount,summary:d});
+    lines.push({acctCode:"110600-03",custCode:"",dc:2,amount,summary:d});
+
+  }else if(hasSplit){
+    // 合拆：解析各房源和金額
+    const splitItems=[];
+    const itemRegex=/([^($、，,()（）\s][^($、，（）]*?)\s*\(\$?([\d,]+)\)/g;
+    let m;
+    while((m=itemRegex.exec(d))!==null){
+      const itemName=m[1].replace(/合拆[:：]?\s*/,"").replace(/^[)）\s]+/,"").trim();
+      const itemAmt=parseInt(m[2].replace(/,/g,""));
+      if(itemName&&itemAmt>0){
+        const hm=matchHousing(itemName.split("-")[0].trim());
+        splitItems.push({name:itemName,code:hm?hm.code:"",amt:itemAmt});
+      }
+    }
+
+    // 後段文字：去掉「合拆」部分，去掉公司名稱
+    const afterSplit=d.replace(/\(合拆\)[^-]*-?/,"").replace(/^\s*[-–]\s*/,"")
+      .replace(/-?[^-]*(?:有限公司|股份有限公司)[^-]*/g,"").replace(/-+$/,"").trim();
+
+    // 借方客供商代號：第一個房源
+    const firstCode=splitItems.length>0?splitItems[0].code:"";
+    // 借方摘要：所有房源名稱-後段文字
+    const houseNames=splitItems.map(i=>i.name).join("、");
+    const debitSummary=`${houseNames}-${afterSplit}`;
+
+    lines.push({acctCode:"1110-01",custCode:firstCode,dc:1,amount,summary:debitSummary});
+
+    splitItems.forEach(item=>{
+      const creditSummary=`${item.name}-${afterSplit}`;
+      lines.push({acctCode:"2205-01",custCode:item.code,dc:2,amount:item.amt,
+        summary:creditSummary});
+    });
+
+    if(splitItems.length===0){
+      lines.push({acctCode:"2205-01",custCode:code,dc:2,amount,summary:d});
+    }
+
+  }else if(hasAdvance){
     // 代墊款：借方依各筆原始金額分列，貸方空白
     const ym=extractYearMonth(d);
     const subAmts=options.subAmounts||(amount?[amount]:[]);
@@ -1450,15 +1523,30 @@ function buildVoucherFromCashflowDesc(desc, amount, date, rocYear, options={}){
       else lines.push({acctCode:"2205-02",custCode:code,dc:2,amount:diff,summary:d});
     }
 
+  }else if(hasEarnest){
+    // 定金：1110-01 借1 / 2205-01 貸2
+    // 摘要：房源-定金-承租人
+    const tenantM=d.match(/定金[-–](.+)$/);
+    const tenant=tenantM?tenantM[1].trim():"";
+    const earnestSummary=`${houseName}-定金${tenant?"-"+tenant:""}`;
+    lines.push({acctCode:"1110-01",custCode:code,dc:1,amount,summary:earnestSummary});
+    lines.push({acctCode:"2205-01",custCode:code,dc:2,amount,summary:earnestSummary});
+
   }else if(hasDeposit){
     // E. 純押金
     lines.push({acctCode:"1110-01",custCode:code,dc:1,amount,summary:d});
     lines.push({acctCode:"2205-03",custCode:code,dc:2,amount,summary:d});
 
   }else if(hasRent){
-    // A. 一般租金
-    lines.push({acctCode:"1110-01",custCode:code,dc:1,amount,summary:d});
-    lines.push({acctCode:"2205-02",custCode:code,dc:2,amount,summary:d});
+    if(isPackage){
+      // 包租-B 租金：1110-01 / 4101-01（帶部門編號）
+      lines.push({acctCode:"1110-01",custCode:code,dc:1,amount,summary:d,deptNo:""});
+      lines.push({acctCode:"4101-01",custCode:code,dc:2,amount,summary:d,deptNo});
+    }else{
+      // 一般代管租金
+      lines.push({acctCode:"1110-01",custCode:code,dc:1,amount,summary:d,deptNo:""});
+      lines.push({acctCode:"2205-02",custCode:code,dc:2,amount,summary:d,deptNo:""});
+    }
 
   }else if(hasMgmt||hasService){
     // B/C. 代管費 / 服務費
@@ -1800,7 +1888,7 @@ document.getElementById("fang-btn-voucher").addEventListener("click",()=>{
   }
 
   // 9欄格式（符合系統匯入範本）
-  const HEADERS=["年度","傳票號碼","傳票種類","日期","科目代號","客戶供應商代號","借/貸","金額","長摘要"];
+  const HEADERS=["年度","傳票號碼","傳票種類","日期","科目代號","客戶供應商代號","借/貸","金額","長摘要","部門編號"];
   const rows=[HEADERS];
 
   // ── 合併分兩筆的項目 ──
@@ -1838,31 +1926,40 @@ document.getElementById("fang-btn-voucher").addEventListener("click",()=>{
   const rocYear=fangState.matched&&fangState.matched.length>0
     ?fangState.matched[0].source.rocYear:115;
 
+  // 按日期分組
+  const dateGroups=new Map();
   merged.forEach(row=>{
-    const dateStr=row.date||"";
-    const options=row.subAmounts?{subAmounts:row.subAmounts}:{};
-    const lines=buildVoucherFromCashflowDesc(row.desc, row.amount, dateStr, rocYear, options);
-
-    lines.forEach(line=>{
-      rows.push([
-        rocYear,                          // 年度
-        "",                               // 傳票號碼（系統自動產生）
-        3,                                // 傳票種類
-        dateStr,                          // 日期
-        line.acctCode||"",               // 科目代號
-        line.custCode||"",               // 客戶供應商代號
-        line.dc,                          // 借/貸
-        line.amount!=null?line.amount:"", // 金額（代墊款貸方留空）
-        line.summary||"",                 // 長摘要
-      ]);
-    });
+    let dateStr=row.date||TODAY_ROC;
+    const mMatch=dateStr.match(/^(\d+)月(\d+)日$/);
+    if(mMatch){
+      dateStr=`${rocYear}/${pad2(parseInt(mMatch[1]))}/${pad2(parseInt(mMatch[2]))}`;
+    }
+    if(!dateGroups.has(dateStr)) dateGroups.set(dateStr,[]);
+    dateGroups.get(dateStr).push({...row,dateStr});
   });
 
-  const ws=XLSX.utils.aoa_to_sheet(rows);
-  ws["!cols"]=[{wch:8},{wch:12},{wch:10},{wch:14},{wch:14},{wch:16},{wch:6},{wch:10},{wch:40}];
-  const wb=XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb,ws,"傳票累積檔");
-  XLSX.writeFile(wb,"傳票匯入_房管處_"+new Date().toISOString().slice(0,10)+".xlsx");
+  // 每個日期產出一個Excel
+  dateGroups.forEach((dateRows,dateStr)=>{
+    const rows=[HEADERS];
+    dateRows.forEach(row=>{
+      const options=row.subAmounts?{subAmounts:row.subAmounts}:{};
+      const lines=buildVoucherFromCashflowDesc(row.desc,row.amount,row.dateStr,rocYear,options);
+      lines.forEach(line=>{
+        rows.push([rocYear,"DEFAULT",3,row.dateStr,
+          line.acctCode||"",line.custCode||"",line.dc,
+          line.amount!=null?line.amount:"",
+          line.summary||"",
+          line.deptNo||""]);
+      });
+    });
+    const ws=XLSX.utils.aoa_to_sheet(rows);
+    ws["!cols"]=[{wch:8},{wch:12},{wch:10},{wch:14},{wch:14},{wch:16},{wch:6},{wch:10},{wch:40}];
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,ws,"傳票累積檔");
+    // 檔名：收入_傳票匯入_115-07-08.xlsx
+    const fileDate=dateStr.replace(/\//g,"-");
+    XLSX.writeFile(wb,`收入_傳票匯入_${fileDate}.xlsx`);
+  });
 });
 
 document.getElementById("fang-btn-cashflow").addEventListener("click",()=>{
@@ -1886,7 +1983,7 @@ document.getElementById("fang-btn-cashflow").addEventListener("click",()=>{
     if(!m) return;
     const banks=Array.isArray(item.bank)?item.bank:[item.bank];
     // 物件名稱 = 房源名稱 + 房號（remainder）
-    const objName=m.remainder?`${m.matchedName}-${m.remainder}`:m.matchedName;
+    const objName=m.remainder?`${m.matchedName}-${m.remainder.replace(/^-+/,"")}`:m.matchedName;
     const summary=`${objName}-${s.rocYear+pad2(s.rocMonth)}租金-${s.tenant}`;
     banks.forEach(b=>{
       const idx=bankIndexMap.get(b);
@@ -2110,7 +2207,7 @@ function updateBizButtons(){
    業務處 產出
 ══════════════════════════════════════ */
 document.getElementById("biz-btn-voucher").addEventListener("click",()=>{
-  const HEADERS=["年度","傳票號碼","傳票種類","日期","科目代號","客戶供應商代號","借/貸","金額","長摘要"];
+  const HEADERS=["年度","傳票號碼","傳票種類","日期","科目代號","客戶供應商代號","借/貸","金額","長摘要","部門編號"];
   const rows=[HEADERS];
   bizState.matched.forEach(item=>{
     const s=item.source;
@@ -2200,16 +2297,31 @@ function parseExpenseCashflowXlsx(data){
     const iOrderNo=headers.findIndex(h=>h==="單號");
     const iExpense=headers.findIndex(h=>h==="支出");
     const iFee=headers.findIndex(h=>h==="匯費");
+    const iDeptNo=headers.findIndex(h=>h==="部門編號");
+
+    // 找日期欄（col 0）
+    const iDate=0;
+    let currentDate=TODAY_ROC; // 預設今日
 
     aoa.slice(hi+1).forEach(r=>{
+      // 更新日期（若有值則更新，空白沿用上一個）
+      if(r[iDate]){
+        try{
+          const roc=toRoc(r[iDate]);
+          currentDate=`${roc.year}/${pad2(roc.month)}/${pad2(roc.day)}`;
+        }catch(e){}
+      }
+
       const rawDesc=r[iDesc]?String(r[iDesc]):"";
       const desc=rawDesc.replace(/_x000d_/g," ").replace(/[\r\n]+/g," ").replace(/(\d)\s+(\d)/g,"$1$2").replace(/\s+/g," ").trim();
       const orderNo=iOrderNo>=0&&r[iOrderNo]?String(r[iOrderNo]).trim():"";
       const expense=iExpense>=0&&r[iExpense]?Number(r[iExpense]):null;
       const fee=iFee>=0&&r[iFee]?Number(r[iFee]):0;
+      const deptNo=iDeptNo>=0&&r[iDeptNo]?String(r[iDeptNo]).trim():"";
       if(!expense||isNaN(expense)||expense<=0) return;
       const finalDesc=desc||orderNo||"（無說明）";
-      allRows.push({desc:finalDesc, orderNo, expense, fee:isNaN(fee)?0:fee, sheet:sheetName});
+      allRows.push({desc:finalDesc, orderNo, expense, fee:isNaN(fee)?0:fee,
+        sheet:sheetName, rocDateStr:currentDate, deptNo});
     });
   });
 
@@ -2391,23 +2503,114 @@ function parseOwnerRentDesc(desc){
 }
 
 document.getElementById("fang-pay-btn-voucher").addEventListener("click",()=>{
-  const HEADERS=["年度","傳票號碼","傳票種類","日期","科目代號","客戶供應商代號","借/貸","金額","長摘要"];
-  const rows=[HEADERS];
+  const HEADERS=["年度","傳票號碼","傳票種類","日期","科目代號","客戶供應商代號","借/貸","金額","長摘要","部門編號"];
 
-  // 分組：屋主租金 vs 業務勞報 vs 一般支出
-  const ownerRows=[];
-  const bizLaborRows=[];
-  const normalRows=[];
+  // 按工作頁分組
+  const sheetGroups=new Map();
   fangPayVoucherState.rows.forEach(row=>{
-    const d=row.desc||"";
-    if(d.includes("屋主")&&(d.includes("租金")||d.includes("扣繳")||d.includes("二代健保"))){
-      ownerRows.push(row);
-    }else if(row.isBizLabor||d.includes("租賃服務")||(d.includes("扣繳")&&!d.includes("屋主"))){
-      bizLaborRows.push(row);
-    }else{
-      normalRows.push(row);
-    }
+    const sn=row.sheet||"其他";
+    if(!sheetGroups.has(sn)) sheetGroups.set(sn,[]);
+    sheetGroups.get(sn).push(row);
   });
+
+  // 工作頁順序
+  const SHEET_ORDER=["全居代管","社宅業務","業務勞報","投資勞報",
+    "公司帳戶+全居包租","工程帳務","全居代管(合作拆帳)",
+    "退款單-房管處","退款單-短租處","退款單-業務處","退款單-其他","其他"];
+
+  const wb=XLSX.utils.book_new();
+  const sheetsToProcess=[
+    ...SHEET_ORDER.filter(s=>sheetGroups.has(s)),
+    ...[...sheetGroups.keys()].filter(s=>!SHEET_ORDER.includes(s))
+  ];
+
+  sheetsToProcess.forEach(sheetName=>{
+    const sheetRows=sheetGroups.get(sheetName);
+    const rows=[HEADERS];
+
+    // 屋主租金分組
+    const ownerRows=sheetRows.filter(r=>{
+      const d=r.desc||"";
+      return d.includes("屋主")&&(d.includes("租金")||d.includes("扣繳")||d.includes("二代健保"));
+    });
+    // 業務勞報分組
+    const bizRows=sheetRows.filter(r=>{
+      const d=r.desc||"";
+      return r.isBizLabor||d.includes("租賃服務")||d.includes("顧問服務")||(d.includes("扣繳")&&!d.includes("屋主"));
+    });
+    // 一般支出
+    const normalRows=sheetRows.filter(r=>!ownerRows.includes(r)&&!bizRows.includes(r));
+
+    // 屋主租金
+    const ownerGroups=new Map();
+    ownerRows.forEach(row=>{
+      const info=parseOwnerRentDesc(row.desc);
+      const key=`${info.houseName}|${info.ym}|${info.ownerName}`;
+      if(!ownerGroups.has(key)) ownerGroups.set(key,[]);
+      ownerGroups.get(key).push({row,info});
+    });
+    ownerGroups.forEach((items)=>{
+      const main=items.find(i=>i.info.isMain);
+      const withhold=items.find(i=>i.info.isWithhold);
+      const health=items.find(i=>i.info.is2ndHealth);
+      if(!main) return;
+      const{houseName,code,ym,isFullAddr}=main.info;
+      const mainFee=main.row.fee||0;
+      const dateStr=main.row.rocDateStr||TODAY_ROC;
+      const dept=main.row.deptNo||"";
+      if(isFullAddr){
+        const FC="53939912";
+        const totalAmt=(main.row.expense||0)+(withhold?.row.expense||0)+(health?.row.expense||0);
+        rows.push([115,"DEFAULT",3,dateStr,"131450-01",FC,1,main.row.expense,main.row.desc,dept]);
+        if(mainFee>0) rows.push([115,"DEFAULT",3,dateStr,"6270","",1,mainFee,"匯款手續費",""]);
+        rows.push([115,"DEFAULT",3,dateStr,"1110-01",FC,2,main.row.expense+mainFee,main.row.desc,dept]);
+        if(withhold) rows.push([115,"DEFAULT",3,withhold.row.rocDateStr||TODAY_ROC,"131450-01",FC,1,withhold.row.expense,withhold.row.desc,dept]);
+        if(health) rows.push([115,"DEFAULT",3,health.row.rocDateStr||TODAY_ROC,"131450-01",FC,1,health.row.expense,health.row.desc,dept]);
+      }else{
+        const totalAmt=(main.row.expense||0)+(withhold?.row.expense||0)+(health?.row.expense||0);
+        rows.push([115,"DEFAULT",3,dateStr,"5990-01",code,1,totalAmt,`${houseName}-${ym}租金`,dept]);
+        if(mainFee>0) rows.push([115,"DEFAULT",3,dateStr,"6270","",1,mainFee,"匯款手續費",""]);
+        rows.push([115,"DEFAULT",3,dateStr,"1110-01",code,2,main.row.expense,main.row.desc,dept]);
+        if(withhold) rows.push([115,"DEFAULT",3,withhold.row.rocDateStr||TODAY_ROC,"1110-01",code,2,withhold.row.expense,withhold.row.desc,dept]);
+        if(health) rows.push([115,"DEFAULT",3,health.row.rocDateStr||TODAY_ROC,"1110-01",code,2,health.row.expense,health.row.desc,dept]);
+      }
+    });
+
+    // 業務勞報
+    const bizGroups=new Map();
+    bizRows.forEach(row=>{
+      const accountName=row.desc.split("-")[0].trim();
+      const isWithhold=row.desc.includes("扣繳");
+      if(!bizGroups.has(accountName)) bizGroups.set(accountName,[]);
+      bizGroups.get(accountName).push({row,isWithhold});
+    });
+    bizGroups.forEach((items)=>{
+      const main=items.find(i=>!i.isWithhold);
+      const withhold=items.find(i=>i.isWithhold);
+      if(!main) return;
+      const totalAmt=(main.row.expense||0)+(withhold?.row.expense||0);
+      const dept=main.row.deptNo||"";
+      const dateStr=main.row.rocDateStr||TODAY_ROC;
+      rows.push([115,"DEFAULT",3,dateStr,"5990-031","",1,totalAmt,main.row.desc,dept]);
+      rows.push([115,"DEFAULT",3,dateStr,"1110-01","",2,main.row.expense,main.row.desc,dept]);
+      if(withhold) rows.push([115,"DEFAULT",3,withhold.row.rocDateStr||TODAY_ROC,"1110-01","",2,withhold.row.expense,withhold.row.desc,dept]);
+    });
+
+    // 一般支出
+    normalRows.forEach(row=>{
+      const vLines=buildExpenseVoucherLines(row);
+      vLines.forEach(line=>{
+        rows.push([115,"DEFAULT",3,row.rocDateStr||TODAY_ROC,
+          line.acctCode,line.custCode,line.dc,line.amount,line.summary,row.deptNo||""]);
+      });
+    });
+
+    const ws=XLSX.utils.aoa_to_sheet(rows);
+    ws["!cols"]=[{wch:8},{wch:12},{wch:10},{wch:14},{wch:14},{wch:16},{wch:6},{wch:10},{wch:50},{wch:10}];
+    XLSX.utils.book_append_sheet(wb,ws,sheetName.slice(0,31));
+  });
+
+  XLSX.writeFile(wb,"傳票匯入_房管處支出_"+new Date().toISOString().slice(0,10)+".xlsx");
 
   // 屋主租金分組（同房源+同年月+同屋主）
   const ownerGroups=new Map();
@@ -2418,74 +2621,6 @@ document.getElementById("fang-pay-btn-voucher").addEventListener("click",()=>{
     ownerGroups.get(key).push({row,info});
   });
 
-  ownerGroups.forEach((items)=>{
-    const main=items.find(i=>i.info.isMain);
-    const withhold=items.find(i=>i.info.isWithhold);
-    const health=items.find(i=>i.info.is2ndHealth);
-    if(!main) return;
-    const{houseName,code,ym,isFullAddr}=main.info;
-    const mainFee=main.row.fee||0;
-
-    if(isFullAddr){
-      // 完整地址格式：131450-01 借1 / 1110-01 貸2，客供商固定53939912
-      const FIXED_CODE="53939912";
-      const totalAmt=(main.row.expense||0)+(withhold?.row.expense||0)+(health?.row.expense||0);
-      rows.push([115,"DEFAULT",3,"","131450-01",FIXED_CODE,1,main.row.expense,main.row.desc]);
-      if(mainFee>0) rows.push([115,"DEFAULT",3,"","6270","",1,mainFee,"匯款手續費"]);
-      rows.push([115,"DEFAULT",3,"","1110-01",FIXED_CODE,2,main.row.expense+mainFee,main.row.desc]);
-      if(withhold) rows.push([115,"DEFAULT",3,"","131450-01",FIXED_CODE,1,withhold.row.expense,withhold.row.desc]);
-      if(health) rows.push([115,"DEFAULT",3,"","131450-01",FIXED_CODE,1,health.row.expense,health.row.desc]);
-    }else{
-      // 一般房源格式：5990-01 借1 三筆加總 / 1110-01 貸2 各自
-      const totalAmt=(main.row.expense||0)+(withhold?.row.expense||0)+(health?.row.expense||0);
-      const summary5990=`${houseName}-${ym}租金`;
-      rows.push([115,"DEFAULT",3,"","5990-01",code,1,totalAmt,summary5990]);
-      if(mainFee>0) rows.push([115,"DEFAULT",3,"","6270","",1,mainFee,"匯款手續費"]);
-      rows.push([115,"DEFAULT",3,"","1110-01",code,2,main.row.expense,main.row.desc]);
-      if(withhold) rows.push([115,"DEFAULT",3,"","1110-01",code,2,withhold.row.expense,withhold.row.desc]);
-      if(health) rows.push([115,"DEFAULT",3,"","1110-01",code,2,health.row.expense,health.row.desc]);
-    }
-  });
-
-  // 業務勞報分組（同戶名）
-  const bizLaborGroups=new Map();
-  bizLaborRows.forEach(row=>{
-    const d=row.desc||"";
-    // 戶名 = 第一個「-」之前
-    const accountName=d.split("-")[0].trim();
-    const isWithhold=d.includes("扣繳");
-    const key=accountName;
-    if(!bizLaborGroups.has(key)) bizLaborGroups.set(key,[]);
-    bizLaborGroups.get(key).push({row,isWithhold,accountName});
-  });
-
-  bizLaborGroups.forEach((items)=>{
-    const main=items.find(i=>!i.isWithhold);
-    const withhold=items.find(i=>i.isWithhold);
-    if(!main) return;
-    const totalAmt=(main.row.expense||0)+(withhold?.row.expense||0);
-    const summary=main.row.desc;
-    // 借方：5990-031 加總
-    rows.push([115,"DEFAULT",3,"","5990-031","",1,totalAmt,summary]);
-    // 貸方：各自分開
-    rows.push([115,"DEFAULT",3,"","1110-01","",2,main.row.expense,main.row.desc]);
-    if(withhold) rows.push([115,"DEFAULT",3,"","1110-01","",2,withhold.row.expense,withhold.row.desc]);
-  });
-
-  // 一般支出（修繕、退押金、廠商請款等）
-  normalRows.forEach(row=>{
-    const vLines=buildExpenseVoucherLines(row);
-    vLines.forEach(line=>{
-      rows.push([115,"DEFAULT",3,"",
-        line.acctCode,line.custCode,line.dc,line.amount,line.summary]);
-    });
-  });
-
-  const ws=XLSX.utils.aoa_to_sheet(rows);
-  ws["!cols"]=[{wch:8},{wch:12},{wch:10},{wch:14},{wch:14},{wch:16},{wch:6},{wch:10},{wch:50}];
-  const wb=XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb,ws,"傳票累積檔");
-  XLSX.writeFile(wb,"傳票匯入_房管處支出_"+new Date().toISOString().slice(0,10)+".xlsx");
 });
 
 // 判斷是否同仁代墊（收款人名稱含部門前綴）
@@ -2540,9 +2675,39 @@ function parseReqXlsx(data){
 
     // 說明欄組成
     let desc=note;
-    if(isBizLabor){
+    if(reqType==="業務勞報"&&note.includes("中人費")){
+      // 業務勞報含中人費 → 戶名-顧問服務
+      desc=`${accountName}-顧問服務`;
+    }else if(isBizLabor){
+      // 業務勞報無地址 → 戶名-租賃服務
       desc=`${accountName}-租賃服務`;
+    }else if(reqType==="社宅業務"){
+      // 社宅業務 → 全居公證費-地址-大名代
+      const lastDash=note.lastIndexOf("-");
+      const addr=lastDash>0?note.slice(0,lastDash).trim():note;
+      const nameInNote=lastDash>0?note.slice(lastDash+1).trim():"";
+      const staffName=nameInNote||accountName;
+      desc=`全居公證費-${addr}-${staffName}代`;
+    }else if(reqType==="全居代管"){
+      // 全居代管：判斷是否有區間數字格式（11XXXXX-XXXX）
+      const intervalMatch=note.match(/(11\d{4,5}[-–]\d{4})/);
+      if(intervalMatch){
+        // 有區間 → 房源-費用名稱-區間
+        const interval=intervalMatch[1];
+        // 費用名稱：電費/水費/網路費等
+        const FEE_NAMES=["電費","水費","網路費","瓦斯費","管理費","電信費","凱擘","中嘉","第四台"];
+        const feeName=FEE_NAMES.find(f=>note.includes(f))||"費用";
+        // 房源：從備註第一個-之前
+        const houseName=note.split("-")[0].trim().split(" ")[0].trim();
+        desc=`${houseName}-${feeName}-${interval}`;
+      }else if(isStaffAdvance(receiver)){
+        // 無區間且同仁代墊 → 備註-大名代
+        const staffName=extractStaffName(receiver);
+        desc=`${note}-${staffName}代`;
+      }
+      // 無區間且非同仁 → 直接複製備註（desc=note 不變）
     }else if(isStaffAdvance(receiver)){
+      // 其他同仁代墊
       const staffName=extractStaffName(receiver);
       desc=`${note}-${staffName}代`;
     }
@@ -2552,8 +2717,16 @@ function parseReqXlsx(data){
     const noFee=isKGIBank(bank)||NO_FEE_KEYWORDS.some(k=>note.includes(k));
     const transferFee=noFee?0:15;
 
+    // 費用所屬部門 → 部門編號
+    const DEPT_MAP=[['短租','001'],['房管','002'],['業務','003'],['工程','004'],['營運','005']];
+    const costDept=String(r[20]||"").trim();
+    const needsDept=["公司帳務","全居包租"].includes(reqType);
+    const deptNo=needsDept
+      ?(DEPT_MAP.find(([k])=>costDept.includes(k))||["",""])[1]
+      :"";
+
     return{source:"請款單",orderNo:String(r[0]||"").trim(),rocDateStr:"",desc,amount,transferFee,
-      reqType,accountName,isBizLabor,
+      reqType,accountName,isBizLabor,deptNo,
       receiver:String(r[3]||"").trim(),
       raw:r};
   }).filter(r=>r.amount>0);
@@ -2591,9 +2764,18 @@ function parseRefundXlsx(data){
       }
     }
 
-    return{source:"退款單",orderNo:String(r[0]||"").trim(),rocDateStr:"",desc,amount,transferFee:0,
-      dept:String(r[22]||"").trim(),  // 退款部門 col 22
-      raw:r};
+    // 匯費判斷：彙整銀行名稱含「國泰」或彙整銀行代號含「013」→ 0，其餘 15
+    const bankName=String(r[45]||"").trim();
+    const bankCode=String(r[48]||"").trim();
+    const transferFee=(bankName.includes("國泰")||bankCode.includes("013"))?0:15;
+
+    const dept=String(r[22]||"").trim();
+    // 退款部門對應部門編號
+    const DEPT_MAP=[['短租','001'],['房管','002'],['業務','003'],['工程','004'],['營運','005']];
+    const deptNo=(DEPT_MAP.find(([k])=>dept.includes(k))||["",""])[1];
+
+    return{source:"退款單",orderNo:String(r[0]||"").trim(),rocDateStr:"",desc,amount,transferFee,
+      dept,deptNo,raw:r};
   }).filter(r=>r.amount>0);
 }
 
@@ -2702,47 +2884,38 @@ document.getElementById("fang-pay-btn-download").addEventListener("click",()=>{
     sheetGroups[sheetName].push(row);
   });
 
-  // 退款單獨立一頁
+  // 退款單依部門分成各自工作頁
   const refundRows=rows.filter(r=>r.source==="退款單");
-  if(refundRows.length) sheetGroups["退款單"]=refundRows;
+  const DEPT_ORDER=["房管處","短租處","業務處"];
+  const deptRefundGroups={};
+  refundRows.forEach(row=>{
+    const dept=row.dept||"其他";
+    if(!deptRefundGroups[dept]) deptRefundGroups[dept]=[];
+    deptRefundGroups[dept].push(row);
+  });
+  [...DEPT_ORDER,...Object.keys(deptRefundGroups).filter(d=>!DEPT_ORDER.includes(d))].forEach(dept=>{
+    if(deptRefundGroups[dept]?.length)
+      sheetGroups[`退款單-${dept}`]=deptRefundGroups[dept];
+  });
 
   // 建立每個工作頁
   const sheetOrder=["全居代管","社宅業務","業務勞報","投資勞報",
-    "公司帳戶+全居包租","工程帳務","全居代管(合作拆帳)","退款單","其他"];
+    "公司帳戶+全居包租","工程帳務","全居代管(合作拆帳)",
+    "退款單-房管處","退款單-短租處","退款單-業務處","退款單-其他","其他"];
 
   sheetOrder.forEach(sheetName=>{
     if(!sheetGroups[sheetName]||!sheetGroups[sheetName].length) return;
     const rows=sheetGroups[sheetName];
 
-    // 請款單：依收款人分組，同收款人匯費只收一次
     const aoa=[];
-    aoa.push(["日期","說明","單號","收入","支出","匯費","餘額"]);
+    aoa.push(["日期","說明","單號","收入","支出","匯費","餘額","部門編號"]);
 
-    if(sheetName==="退款單"){
-      // 退款單依部門分組：房管處→短租處→業務處→其他
-      const DEPT_ORDER=["房管處","短租處","業務處"];
-      const deptGroups={};
-      const deptOrder=[];
+    if(sheetName.startsWith("退款單-")){
       rows.forEach(row=>{
-        const dept=row.dept||"其他";
-        if(!deptGroups[dept]){
-          deptGroups[dept]=[];
-          deptOrder.push(dept);
-        }
-        deptGroups[dept].push(row);
-      });
-      // 依指定順序排列部門
-      const sortedDepts=[
-        ...DEPT_ORDER.filter(d=>deptGroups[d]),
-        ...deptOrder.filter(d=>!DEPT_ORDER.includes(d)),
-      ];
-      sortedDepts.forEach(dept=>{
-        deptGroups[dept].forEach(row=>{
-          aoa.push([null,row.desc,row.orderNo,null,row.amount,null,null]);
-        });
+        const fee=row.transferFee>0?row.transferFee:null;
+        aoa.push([null,row.desc,row.orderNo,null,row.amount,fee,null,row.deptNo||""]);
       });
     } else {
-      // 依收款人分組
       const receiverGroups={};
       const receiverOrder=[];
       rows.forEach(row=>{
@@ -2756,15 +2929,14 @@ document.getElementById("fang-pay-btn-download").addEventListener("click",()=>{
       receiverOrder.forEach(receiver=>{
         const group=receiverGroups[receiver];
         group.forEach((row,idx)=>{
-          // 匯費只在同收款人第一筆顯示
           const fee=idx===0&&row.transferFee>0?row.transferFee:null;
-          aoa.push([null,row.desc,row.orderNo,null,row.amount,fee,null]);
+          aoa.push([null,row.desc,row.orderNo,null,row.amount,fee,null,row.deptNo||""]);
         });
       });
     }
 
     const ws=XLSX.utils.aoa_to_sheet(aoa);
-    ws["!cols"]=[{wch:10},{wch:50},{wch:20},{wch:12},{wch:12},{wch:8},{wch:12}];
+    ws["!cols"]=[{wch:10},{wch:50},{wch:20},{wch:12},{wch:12},{wch:8},{wch:12},{wch:10}];
     XLSX.utils.book_append_sheet(wb,ws,sheetName.slice(0,31));
   });
 
@@ -2802,41 +2974,47 @@ function parseCashflowForThird(data){
   const wb=XLSX.read(data,{type:"array"});
   const ws=wb.Sheets[wb.SheetNames[0]];
   const aoa=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null});
-  const rows=[];
+  const rows=[];         // 屋主支出列（主軸）
+  const incomeRows=[];   // 收入列
+  const expenseOther=[]; // 非屋主支出列
   let currentDate="";
+
   for(const r of aoa){
+    // 日期沿用邏輯
     const dateCell=r[0]?String(r[0]).replace(/\s*★\s*/g,"").trim():"";
     if(dateCell&&/\d+月\d+日/.test(dateCell)) currentDate=dateCell;
+    else if(r[0]&&typeof r[0]==="number"){
+      try{const roc=toRoc(r[0]);currentDate=`${roc.year}/${pad2(roc.month)}/${pad2(roc.day)}`;}catch(e){}
+    }
+
     const desc=r[1]?String(r[1]).replace(/[\r\n]+/g," ").trim():"";
+    const income=r[3]?Number(r[3]):null;
     const expense=r[4]?Number(r[4]):null;
-    if(!desc||!expense||isNaN(expense)||expense<=0) continue;
-    if(desc==="說明") continue;
-    if(!desc.includes("屋主")||!desc.includes("租金")) continue;
+    if(!desc||desc==="說明") continue;
 
-    // 從說明抓所有房源名稱（以「、」或「，」分隔的前段）
-    // 例如「永吉278居所、大安19居所-11506租金-屋主黃華郁」
-    // → 取第一個「-」之前的部分，再用「、」「，」分隔
-    const beforeDash=desc.split("-")[0];
-    const houseNames=beforeDash.split(/[、，,]/).map(s=>s.trim()).filter(Boolean);
+    // 收入列
+    if(income&&!isNaN(income)&&income>0){
+      incomeRows.push({date:currentDate, desc, amount:income});
+    }
 
-    const houses=houseNames.map(hn=>{
-      const houseMatch=matchHousing(hn);
-      return{
-        houseName:hn,
-        houseMatch,
-        code:houseMatch?houseMatch.code:hn,
-      };
-    });
-
-    rows.push({
-      date:currentDate,
-      desc,
-      expense,
-      transferFee:Number(r[5])||0, // 匯費 col 5
-      houses,
-    });
+    // 支出列
+    if(expense&&!isNaN(expense)&&expense>0){
+      if(desc.includes("屋主")&&desc.includes("租金")){
+        // 屋主支出列（主軸）
+        const beforeDash=desc.split("-")[0];
+        const houseNames=beforeDash.split(/[、，,]/).map(s=>s.trim()).filter(Boolean);
+        const houses=houseNames.map(hn=>{
+          const houseMatch=matchHousing(hn);
+          return{houseName:hn, houseMatch, code:houseMatch?houseMatch.code:hn};
+        });
+        rows.push({date:currentDate, desc, expense, transferFee:Number(r[5])||0, houses});
+      }else{
+        // 非屋主支出（代墊款等）
+        expenseOther.push({date:currentDate, desc, expense});
+      }
+    }
   }
-  return rows;
+  return{rows, incomeRows, expenseOther};
 }
 
 let fang3rdState={
@@ -2848,7 +3026,12 @@ let fang3rdState={
   bindDropzone(`fang-3rd-dz-${key}`,`fang-3rd-file-${key}`,async(file,dz)=>{
     try{
       const data=await readFile(file);
-      if(key==="cashflow") fang3rdState.cashflow=parseCashflowForThird(data);
+      if(key==="cashflow"){
+        const parsed=parseCashflowForThird(data);
+        fang3rdState.cashflow=parsed.rows;
+        fang3rdState.cashflow_income=parsed.incomeRows;
+        fang3rdState.cashflow_expense_other=parsed.expenseOther;
+      }
       else if(key==="invoice") fang3rdState.invoice=parseFangInvoiceXlsx(data);
       dz.classList.add("loaded");
       dz.querySelector(".dz-label").textContent="✓ "+file.name;
@@ -2902,8 +3085,9 @@ document.getElementById("fang-3rd-file-expense").addEventListener("change",async
 });
 
 function updateFang3rdMatchBtn(){
+  // 金流表+電子發票就可以比對（收入/支出傳票選填）
   document.getElementById("fang-3rd-btn-match").disabled=
-    !(fang3rdState.cashflow&&fang3rdState.income);
+    !(fang3rdState.cashflow&&fang3rdState.invoice);
 }
 
 document.getElementById("fang-3rd-btn-match").addEventListener("click",()=>{
@@ -3009,61 +3193,134 @@ document.getElementById("fang-3rd-btn-reset").addEventListener("click",()=>{
 });
 
 document.getElementById("fang-3rd-btn-download").addEventListener("click",()=>{
-  const HEADERS=["年度","傳票號碼","傳票種類","日期","科目代號","客戶供應商代號","借/貸","金額","長摘要"];
+  const HEADERS=["年度","傳票號碼","傳票種類","日期","科目代號","客戶供應商代號","借/貸","金額","長摘要","部門編號"];
   const rows=[HEADERS];
+
+  // 判斷走哪個邏輯
+  const useMethodA=!(fang3rdState.income&&fang3rdState.expense);
 
   fang3rdState.results.forEach(item=>{
     const{cfRow,houseResults}=item;
     const rocYear=115;
 
-    // 每個房源的 Step1+2+3
-    houseResults.forEach(h=>{
-      if(!h.incomeLines.length) return;
+    if(useMethodA){
+      // ── 方案A：從金流表判斷科目 ──
+      cfRow.houses.forEach(h=>{
+        const{houseName,code}=h;
+        const yearMonth=cfRow.yearMonth||"";
 
-      // Step1：收入傳票貸方→反轉為借方
-      h.incomeLines.forEach(line=>{
-        rows.push([rocYear,"DEFAULT",3,line.date||cfRow.date,
-          line.acctCode,line.custCode,1,line.amount,line.summary]);
+        // 從金流表收入欄找同房源同年月的收入列
+        const incomeRows=(fang3rdState.cashflow_income||[]).filter(r=>{
+          const nameMatch=r.desc.includes(houseName);
+          const ymMatch=!yearMonth||r.desc.includes(yearMonth);
+          return nameMatch&&ymMatch;
+        });
+
+        // 收入列→借方（根據說明判斷科目）
+        incomeRows.forEach(r=>{
+          const d=r.desc||"";
+          let acct="2205-02";
+          if(d.includes("代管費")) acct="2205-01";
+          else if(d.includes("押金")) acct="2205-03";
+          else if(d.includes("服務費")) acct="2205-01";
+          rows.push([rocYear,"DEFAULT",3,r.date||cfRow.date,
+            acct,code,1,r.amount,d,""]);
+        });
+
+        // 金流表支出欄非屋主租金的列→貸方代墊款
+        const expenseRows=(fang3rdState.cashflow_expense_other||[]).filter(r=>{
+          return r.desc.includes(houseName)&&(!yearMonth||r.desc.includes(yearMonth));
+        });
+        expenseRows.forEach(r=>{
+          rows.push([rocYear,"DEFAULT",3,r.date||cfRow.date,
+            "131450-01",code,2,r.expense,r.desc,""]);
+        });
+
+        // 電子發票
+        const invoices=(fang3rdState.invoice||[]).filter(inv=>{
+          const m=matchHousing(inv.caseName);
+          const codeMatch=m&&m.code===code;
+          const nameMatch=inv.caseName.includes(houseName)||houseName.includes(inv.caseName);
+          const ymOk=!yearMonth||inv.yearMonth===yearMonth;
+          return (codeMatch||nameMatch)&&ymOk;
+        });
+        invoices.forEach(inv=>{
+          const s1=`${inv.caseName}-${inv.yearMonth}-${fangInvoiceTypeName(inv.type)}`;
+          const s2=`${s1}-${inv.invoiceNo}`;
+          rows.push([inv.rocYear,"DEFAULT",3,inv.rocDateStr,
+            fangInvoiceAcctCode(inv.type),inv.custCode,2,inv.untaxed,s1,""]);
+          rows.push([inv.rocYear,"DEFAULT",3,inv.rocDateStr,
+            "2290",inv.custCode,2,inv.tax,s2,""]);
+        });
       });
 
-      // Step2：支出傳票借方→反轉為貸方
-      h.expenseLines.forEach(line=>{
-        rows.push([rocYear,"DEFAULT",3,line.date||cfRow.date,
-          line.acctCode,line.custCode,2,line.amount,line.summary]);
-      });
-
-      // Step3：電子發票
-      h.invoices.forEach(inv=>{
-        const s1=`${inv.caseName}-${inv.yearMonth}-${inv.type}`;
-        const s2=`${inv.caseName}-${inv.yearMonth}-${inv.type}-${inv.invoiceNo}`;
-        rows.push([inv.rocYear,"DEFAULT",3,inv.rocDateStr,
-          fangInvoiceAcctCode(inv.type),inv.custCode,2,inv.untaxed,s1]);
-        rows.push([inv.rocYear,"DEFAULT",3,inv.rocDateStr,
-          "2290",inv.custCode,2,inv.tax,s2]);
-      });
-    });
-
-    // Step4：最後一列，整列金流表支出＋匯費（所有房源共用一列）
-    const hasAny=houseResults.some(h=>h.incomeLines.length>0);
-    if(hasAny){
+      // 最後一列
       const totalAmt=cfRow.expense+(cfRow.transferFee||0);
       const firstHouse=cfRow.houses[0];
       const lastRowCode=firstHouse?firstHouse.code:"";
-      // 若有匯費，加一列 6270
       if(cfRow.transferFee>0){
-        rows.push([rocYear,"DEFAULT",3,cfRow.date,
-          "6270","",1,cfRow.transferFee,"匯款手續費"]);
+        rows.push([rocYear,"DEFAULT",3,cfRow.date,"6270","",1,cfRow.transferFee,"匯款手續費",""]);
       }
-      rows.push([rocYear,"DEFAULT",3,cfRow.date,
-        "1110-01",lastRowCode,2,totalAmt,cfRow.desc]);
+      rows.push([rocYear,"DEFAULT",3,cfRow.date,"1110-01",lastRowCode,2,totalAmt,cfRow.desc,""]);
+
+    }else{
+      // ── 原本邏輯：傳票反轉 ──
+      houseResults.forEach(h=>{
+        if(!h.incomeLines.length) return;
+
+        // Step1：收入傳票貸方→反轉為借方
+        h.incomeLines.forEach(line=>{
+          rows.push([rocYear,"DEFAULT",3,line.date||cfRow.date,
+            line.acctCode,line.custCode,1,line.amount,line.summary,""]);
+        });
+
+        // Step2：支出傳票借方→反轉為貸方
+        h.expenseLines.forEach(line=>{
+          rows.push([rocYear,"DEFAULT",3,line.date||cfRow.date,
+            line.acctCode,line.custCode,2,line.amount,line.summary,""]);
+        });
+
+        // Step3：電子發票
+        h.invoices.forEach(inv=>{
+          const s1=`${inv.caseName}-${inv.yearMonth}-${fangInvoiceTypeName(inv.type)}`;
+          const s2=`${s1}-${inv.invoiceNo}`;
+          rows.push([inv.rocYear,"DEFAULT",3,inv.rocDateStr,
+            fangInvoiceAcctCode(inv.type),inv.custCode,2,inv.untaxed,s1,""]);
+          rows.push([inv.rocYear,"DEFAULT",3,inv.rocDateStr,
+            "2290",inv.custCode,2,inv.tax,s2,""]);
+        });
+      });
+
+      // Step4：最後一列
+      const hasAny=houseResults.some(h=>h.incomeLines.length>0);
+      if(hasAny){
+        const totalAmt=cfRow.expense+(cfRow.transferFee||0);
+        const firstHouse=cfRow.houses[0];
+        const lastRowCode=firstHouse?firstHouse.code:"";
+        if(cfRow.transferFee>0){
+          rows.push([rocYear,"DEFAULT",3,cfRow.date,"6270","",1,cfRow.transferFee,"匯款手續費",""]);
+        }
+        rows.push([rocYear,"DEFAULT",3,cfRow.date,"1110-01",lastRowCode,2,totalAmt,cfRow.desc,""]);
+      }
     }
   });
 
-  const ws=XLSX.utils.aoa_to_sheet(rows);
-  ws["!cols"]=[{wch:8},{wch:12},{wch:10},{wch:14},{wch:14},{wch:16},{wch:6},{wch:10},{wch:50}];
-  const wb_out=XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb_out,ws,"傳票累積檔");
-  XLSX.writeFile(wb_out,"傳票匯入_房管處第三次_"+new Date().toISOString().slice(0,10)+".xlsx");
+  // 按日期分組產出多個Excel
+  const dateGrouped=new Map();
+  rows.slice(1).forEach(row=>{
+    const d=row[3]||TODAY_ROC;
+    if(!dateGrouped.has(d)) dateGrouped.set(d,[]);
+    dateGrouped.get(d).push(row);
+  });
+
+  dateGrouped.forEach((dateRows,dateStr)=>{
+    const ws=XLSX.utils.aoa_to_sheet([rows[0],...dateRows]);
+    ws["!cols"]=[{wch:8},{wch:12},{wch:10},{wch:14},{wch:14},{wch:16},{wch:6},{wch:10},{wch:50}];
+    const wb_out=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb_out,ws,"傳票累積檔");
+    const fileDate=dateStr.replace(/\//g,"-");
+    XLSX.writeFile(wb_out,`出款屋主_傳票匯入_${fileDate}.xlsx`);
+  });
 });
 
 /* ══════════════════════════════════════
@@ -3105,13 +3362,17 @@ function parseBizCashflowXlsx(data){
   for(const r of aoa){
     const dateCell=r[0]?String(r[0]).trim():"";
     if(dateCell&&/\d+月\d+日/.test(dateCell)) currentDate=dateCell;
+    else if(r[0] instanceof Date){
+      try{const roc=toRoc(r[0]);currentDate=roc.month+"月"+roc.day+"日";}catch(e){}
+    }
     const desc=r[1]?String(r[1]).replace(/[\r\n]+/g," ").trim():"";
     const income=r[3]?Number(r[3]):null;
     if(!desc||!income||isNaN(income)||income<=0) continue;
     if(desc==="說明") continue;
-    // 抓發票號碼（BR/ZZ/ZX 開頭）
+    if(!desc.includes("服務費")) continue;
+    // 抓發票號碼（兩個大寫英文字母開頭）
     const invNos=[];
-    const invMatches=desc.matchAll(/([BZ][RZX]\d+)/g);
+    const invMatches=desc.matchAll(/([A-Z]{2}[\-\d]+)/g);
     for(const m of invMatches) invNos.push(m[1]);
     rows.push({date:currentDate, desc, amount:income, invNos, raw:r});
   }
@@ -3120,57 +3381,43 @@ function parseBizCashflowXlsx(data){
 
 // 比對：案件地址＋金額(含稅)
 function reconcileBizInvoice(cashflowRows, invoices){
-  const invUsed=new Set();
   const matched=[];
   const unmatched=[];
 
-  // 只處理含「服務費」且有發票號碼的金流表列
-  const serviceRows=cashflowRows.filter(r=>
-    r.desc.includes("服務費")&&r.invNos.length>0);
+  const serviceRows=cashflowRows.filter(r=>r.desc.includes("服務費"));
 
   for(const cfRow of serviceRows){
-    // 找對應的發票（案件地址出現在說明欄開頭 ＋ 金額相符）
-    const matchedInvs=[];
-    for(let i=0;i<invoices.length;i++){
-      if(invUsed.has(i)) continue;
-      const inv=invoices[i];
+    // 從說明欄抓地址（開頭到第一個「-」之前）
+    const addrPart=cfRow.desc.split("-")[0].trim();
+
+    // 比對：案件地址相符 + 買受人名字出現在金流表說明欄
+    const matchedInvs=invoices.filter(inv=>{
+      if(!inv.caseAddr) return false;
       const addrMatch=cfRow.desc.startsWith(inv.caseAddr)||
-        inv.caseAddr.length>5&&cfRow.desc.includes(inv.caseAddr.slice(0,20));
-      const amtMatch=Math.abs(inv.total-cfRow.amount)<1||
-        cfRow.invNos.includes(inv.invoiceNo);
-      if(addrMatch&&amtMatch){
-        matchedInvs.push({idx:i,inv});
-      }
-    }
-    // 兩個發票的情況：金額加總等於金流表金額
+        inv.caseAddr.startsWith(addrPart)||
+        addrPart===inv.caseAddr;
+      const buyerMatch=inv.buyerName&&cfRow.desc.includes(inv.buyerName);
+      return addrMatch&&buyerMatch;
+    });
+
     if(matchedInvs.length===0){
-      // 嘗試找兩筆加總
-      const candidates=invoices
-        .map((inv,i)=>({idx:i,inv}))
-        .filter(({idx,inv})=>!invUsed.has(idx)&&
-          (cfRow.desc.includes(inv.caseAddr.slice(0,15))||
-           cfRow.invNos.includes(inv.invoiceNo)));
-      if(candidates.length>=2){
-        for(let a=0;a<candidates.length;a++){
-          for(let b=a+1;b<candidates.length;b++){
-            const sum=candidates[a].inv.total+candidates[b].inv.total;
-            if(Math.abs(sum-cfRow.amount)<1){
-              invUsed.add(candidates[a].idx);
-              invUsed.add(candidates[b].idx);
-              matched.push({cfRow,invs:[candidates[a].inv,candidates[b].inv]});
-              goto_next:; break;
-            }
-          }
-          if(matched[matched.length-1]?.cfRow===cfRow) break;
-        }
-      }
-      if(!matched.length||matched[matched.length-1]?.cfRow!==cfRow){
-        unmatched.push(cfRow);
-      }
-    }else{
-      matchedInvs.forEach(({idx})=>invUsed.add(idx));
-      matched.push({cfRow,invs:matchedInvs.map(m=>m.inv)});
+      unmatched.push(cfRow);
+      continue;
     }
+
+    // 回填發票號碼到說明欄（若原本沒有）
+    const hasInvNo=cfRow.invNos.length>0;
+    let newDesc=cfRow.desc;
+    if(!hasInvNo){
+      const invNosStr=matchedInvs.map(inv=>inv.invoiceNo).join("-");
+      newDesc=`${cfRow.desc}-${invNosStr}`;
+    }
+
+    // 判斷屋主/房客
+    const isOwner=cfRow.desc.includes("屋主");
+    const isTenant=cfRow.desc.includes("房客");
+
+    matched.push({cfRow:{...cfRow,desc:newDesc},invs:matchedInvs,isOwner,isTenant});
   }
   return{matched,unmatched};
 }
@@ -3227,6 +3474,10 @@ document.getElementById("biz-inv-btn-reset").addEventListener("click",()=>{
 
 function renderBizInvResult(){
   document.getElementById("biz-inv-result").hidden=false;
+  // 預設收合
+  document.getElementById("biz-inv-tb-wrap").hidden=true;
+  document.getElementById("biz-inv-toggle").textContent="▶";
+
   const{matched,unmatched}=bizInvState;
   document.getElementById("biz-inv-cnt-matched").textContent=matched.length;
   document.getElementById("biz-inv-cnt-unmatched").textContent=unmatched.length;
@@ -3247,8 +3498,8 @@ function renderBizInvResult(){
       <td class="mono right">${fmtMoney(cfRow.amount)}</td>
       <td class="mono">${invNosStr}</td>
       <td>${buyersStr}</td>
-      <td class="mono right">${fmtMoney(totalUntax)}</td>
-      <td class="mono right">${fmtMoney(totalTax)}</td>
+      <td class="mono right">${fmtMoney(Math.round(totalUntax))}</td>
+      <td class="mono right">${fmtMoney(Math.round(totalTax))}</td>
       <td><span class="tag ok">✓ 比對成功</span></td>
     `;
     tb.appendChild(tr);
@@ -3270,9 +3521,9 @@ function renderBizInvResult(){
   const totalAmt=matched.reduce((s,m)=>s+m.cfRow.amount,0);
   const totalUntax=matched.reduce((s,m)=>s+m.invs.reduce((a,inv)=>a+inv.untaxed,0),0);
   const totalTax=matched.reduce((s,m)=>s+m.invs.reduce((a,inv)=>a+inv.tax,0),0);
-  document.getElementById("biz-inv-bal").innerHTML=
-    `比對成功 ${matched.length} 筆｜金額 ${fmtMoney(totalAmt)}｜未稅 ${fmtMoney(totalUntax)}｜稅額 ${fmtMoney(totalTax)}`;
-
+  const summaryText=`比對成功 ${matched.length} 筆｜金額 ${fmtMoney(totalAmt)}｜未稅 ${fmtMoney(Math.round(totalUntax))}｜稅額 ${fmtMoney(Math.round(totalTax))}`;
+  document.getElementById("biz-inv-bal").textContent=summaryText;
+  document.getElementById("biz-inv-summary-line").textContent=summaryText;
   document.getElementById("biz-inv-btn-cashflow").disabled=matched.length===0;
   document.getElementById("biz-inv-btn-voucher").disabled=matched.length===0;
 }
@@ -3281,25 +3532,32 @@ function renderBizInvResult(){
 document.getElementById("biz-inv-btn-cashflow").addEventListener("click",()=>{
   const cf=bizInvState.cashflow;
   if(!cf) return;
-  // 建立已比對的金流表列 → invNos 對應表
-  const matchMap=new Map();
+
+  // 建立 index→新說明 的對應（reconcileBizInvoice 已回填發票號碼到 cfRow.desc）
+  const descByIdx=new Map();
   bizInvState.matched.forEach(item=>{
-    matchMap.set(item.cfRow,item.invs);
+    // 找原始 cf 裡對應的 index（用金額和說明開頭比對）
+    const origDesc=item.cfRow.desc
+      .replace(/-[A-Z]{2}[\-\d]+/g,"")  // 去掉發票號碼
+      .replace(/-+$/,"").trim();
+    const idx=cf.findIndex(r=>
+      r.amount===item.cfRow.amount&&
+      origDesc.startsWith(r.desc.split("-")[0].trim())
+    );
+    if(idx>=0) descByIdx.set(idx, item.cfRow.desc);
   });
 
-  // 重建金流表格式
   const aoa=[];
   aoa.push(["115年","國泰世華/仁愛分行 #57668 - 銀存明細  業務處",null,null,null,null,null]);
   aoa.push(["日期",null,"說明","收入","支出","匯費","餘額"]);
   let lastDate="";
-  cf.forEach(row=>{
+  cf.forEach((row,idx)=>{
     const dateCell=row.date===lastDate?null:row.date;
-    const invs=matchMap.get(row);
-    let desc=row.desc;
-    // 如果有比對到發票，說明欄維持原樣（已有發票號碼）
+    const desc=descByIdx.has(idx)?descByIdx.get(idx):row.desc;
     aoa.push([dateCell,desc,null,row.amount,null,null,null]);
     lastDate=row.date;
   });
+
   const ws=XLSX.utils.aoa_to_sheet(aoa);
   ws["!cols"]=[{wch:10},{wch:60},{wch:12},{wch:12},{wch:10},{wch:8},{wch:12}];
   const wb=XLSX.utils.book_new();
@@ -3309,26 +3567,30 @@ document.getElementById("biz-inv-btn-cashflow").addEventListener("click",()=>{
 
 // 下載傳票匯入檔
 document.getElementById("biz-inv-btn-voucher").addEventListener("click",()=>{
-  const HEADERS=["年度","傳票號碼","傳票種類","日期","科目代號","客戶供應商代號","借/貸","金額","長摘要"];
+  const HEADERS=["年度","傳票號碼","傳票種類","日期","科目代號","客戶供應商代號","借/貸","金額","長摘要","部門編號"];
   const rows=[HEADERS];
 
   bizInvState.matched.forEach(item=>{
-    const{cfRow,invs}=item;
+    const{cfRow,invs,isOwner,isTenant}=item;
     const addr=invs[0].caseAddr||cfRow.desc.split("-")[0];
     const rocYear=invs[0].rocYear||115;
     const dateStr=cfRow.date||"";
 
-    // 借方第一列：1110-02，摘要含所有買受人
-    const buyersDesc=invs.map(inv=>`${inv.buyerName}-服務費`).join("+");
-    rows.push([rocYear,"DEFAULT",3,dateStr,"1110-02","",1,cfRow.amount,
-      `${addr}-${buyersDesc}`]);
+    // 借方摘要：用金流表說明（去掉發票號碼部分）
+    const debitSummary=cfRow.desc.replace(/-[A-Z]{2}[\-\d]+/g,"").replace(/-+$/,"").trim();
+
+    // 借方：1110-02 全額
+    rows.push([rocYear,"DEFAULT",3,dateStr,"1110-02","",1,cfRow.amount,debitSummary]);
 
     // 每張發票兩列貸方
     invs.forEach(inv=>{
-      const s1=`${addr}-${inv.buyerName}-服務費`;
-      const s2=`${addr}-${inv.buyerName}-服務費-${inv.invoiceNo}`;
-      rows.push([rocYear,"DEFAULT",3,inv.rocDateStr||dateStr,"4101-03","",2,inv.untaxed,s1]);
-      rows.push([rocYear,"DEFAULT",3,inv.rocDateStr||dateStr,"2290","",2,inv.tax,s2]);
+      const buyerName=inv.buyerName||"";
+      const s1=`${addr}-${buyerName}-服務費`;
+      const s2=`${addr}-${buyerName}-服務費-${inv.invoiceNo}`;
+      rows.push([rocYear,"DEFAULT",3,inv.rocDateStr||dateStr,"4101-03","",2,
+        Math.round(inv.untaxed),s1]);
+      rows.push([rocYear,"DEFAULT",3,inv.rocDateStr||dateStr,"2290","",2,
+        Math.round(inv.tax),s2]);
     });
   });
 
@@ -3467,7 +3729,7 @@ document.getElementById("fang-inv-reset").addEventListener("click",()=>{
 });
 
 document.getElementById("fang-inv-download").addEventListener("click",()=>{
-  const HEADERS=["年度","傳票號碼","傳票種類","日期","科目代號","客戶供應商代號","借/貸","金額","長摘要"];
+  const HEADERS=["年度","傳票號碼","傳票種類","日期","科目代號","客戶供應商代號","借/貸","金額","長摘要","部門編號"];
   const rows=[HEADERS];
   fangInvState.invoices.forEach(inv=>{
     const s1=`${inv.caseName}-${inv.yearMonth}-${inv.type}`;
@@ -3533,7 +3795,7 @@ function invoiceAcctCode(type){
 
 // 產出電子發票傳票（9欄）
 function buildInvoiceVoucherRows(invoices){
-  const HEADERS=["年度","傳票號碼","傳票種類","日期","科目代號","客戶供應商代號","借/貸","金額","長摘要"];
+  const HEADERS=["年度","傳票號碼","傳票種類","日期","科目代號","客戶供應商代號","借/貸","金額","長摘要","部門編號"];
   const rows=[HEADERS];
   invoices.forEach(inv=>{
     const houseMatch=matchHousing(inv.caseName);
