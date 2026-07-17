@@ -3591,47 +3591,68 @@ function parseFangInvoiceXlsx(data){
   const hi=aoa.findIndex(r=>r&&r.some(c=>c==="發票號碼"));
   if(hi===-1)throw new Error("找不到「發票號碼」欄位");
   const headers=aoa[hi];
-  // 用欄位名稱找 index
   const colMap={};
   headers.forEach((h,i)=>{ if(h&&!colMap[h]) colMap[h]=i; });
-  // 「營業稅」有兩欄，取後面那個（小計未稅旁邊的那個）
-  const taxCols=headers.reduce((a,h,i)=>h==="營業稅"?[...a,i]:a,[]);
-  const taxCol=taxCols.length>=2?taxCols[taxCols.length-1]:taxCols[0];
   const col=n=>colMap[n]??-1;
 
-  return aoa.slice(hi+1).filter(r=>r[col("發票號碼")]!=null).map(r=>{
-    const note=r[col("發票備註")]?String(r[col("發票備註")]).trim():"";
-    const brandName=r[col("發票品名(首欄)")]?String(r[col("發票品名(首欄)")]).trim():"";
-    const invoiceNo=String(r[col("發票號碼")]||"").trim();
-    const untaxed=Math.round(Number(r[col("小計（未稅）")])||0);
-    const tax=Math.round(Number(r[taxCol])||0);
-    const total=Number(r[col("總金額")])||0;
+  // 判斷格式：房管處自己的系統（有「發票備註」「小計（未稅）」「發票品名」）
+  // vs Ragic格式（有「合約案件名稱」「發票備註」）
+  const isSimpleFormat=col("小計（未稅）")>=0&&col("發票品名")>=0&&col("合約案件名稱")<0;
 
-    // 案件名稱：優先欄位，空白時從備註判斷
-    let caseName=r[col("合約案件名稱")]?String(r[col("合約案件名稱")]).trim():"";
-    if(!caseName&&note){
-      const parts=note.split("/").map(s=>s.trim()).filter(Boolean);
-      for(const p of parts){
-        const isNum=/^\d+$/.test(p.replace(/,/g,""));
-        const isYM=/^\d{4,5}$/.test(p);
-        const isCompany=p.includes("有限公司")||p.includes("股份有限公司");
-        if(!isNum&&!isYM&&!isCompany&&p.length>=2){
-          caseName=p.includes(".")?p.split(".")[0].trim():p;
-          break;
+  return aoa.slice(hi+1).filter(r=>r[col("發票號碼")]!=null).map(r=>{
+    const invoiceNo=String(r[col("發票號碼")]||"").trim();
+    const note=r[col(isSimpleFormat?"發票備註":"發票備註")]?String(r[col("發票備註")]).trim():"";
+    const brandName=r[col(isSimpleFormat?"發票品名":"發票品名(首欄)")]?
+      String(r[col(isSimpleFormat?"發票品名":"發票品名(首欄)")]).trim():"";
+
+    let untaxed,tax,caseName,yearMonth;
+
+    if(isSimpleFormat){
+      // 房管處格式：col 8=未稅, col 9=稅
+      untaxed=Math.round(Number(r[col("小計（未稅）")])||0);
+      tax=Math.round(Number(r[col("營業稅")])||0);
+
+      // 備註格式：「11506 / 雙十居所代管費 / 3095 / 155」或「雙十居所/346/17」
+      const parts=note.split(/\s*\/\s*/).map(s=>s.trim()).filter(Boolean);
+      // 找年月（5位數字）
+      const ymPart=parts.find(p=>/^\d{5}$/.test(p));
+      yearMonth=ymPart||"";
+      // 找房源名稱（非數字、非年月的部分）
+      const namePart=parts.find(p=>!/^\d+$/.test(p)&&p!==ymPart);
+      // 去掉費用名稱（代管費/修繕費等）
+      caseName=namePart?namePart.replace(/代管費|修繕費|系統費|服務費/g,"").trim():"";
+      if(!caseName&&brandName) caseName=brandName;
+
+    }else{
+      // Ragic格式
+      const taxCols=headers.reduce((a,h,i)=>h==="營業稅"?[...a,i]:a,[]);
+      const taxCol=taxCols.length>=2?taxCols[taxCols.length-1]:taxCols[0];
+      untaxed=Math.round(Number(r[col("小計（未稅）")])||0);
+      tax=Math.round(Number(r[taxCol])||0);
+
+      caseName=r[col("合約案件名稱")]?String(r[col("合約案件名稱")]).trim():"";
+      if(!caseName&&note){
+        const noteParts=note.split("/").map(s=>s.trim()).filter(Boolean);
+        for(const p of noteParts){
+          const isNum=/^\d+$/.test(p.replace(/,/g,""));
+          const isYM=/^\d{4,5}$/.test(p);
+          const isCo=p.includes("有限公司")||p.includes("股份有限公司");
+          if(!isNum&&!isYM&&!isCo&&p.length>=2){
+            caseName=p.includes(".")?p.split(".")[0].trim():p;
+            break;
+          }
         }
       }
+      const ymMatch=note.match(/(\d{5})/);
+      yearMonth=ymMatch?ymMatch[1]:"";
     }
 
     // 判斷類型
     let type="服務費";
     if(brandName.includes("修繕費")||note.includes("修繕費")) type="修繕費";
     else if(brandName.includes("代管費")||note.includes("代管費")) type="代管費";
-    else if(note.includes("系統服務費")||note.includes("系統管理費")) type="系統服務費";
+    else if(note.includes("系統服務費")||note.includes("系統管理費")||brandName.includes("系統")) type="系統服務費";
     else if(note.includes("系統費")) type="系統服務費";
-
-    // 年月
-    const ymMatch=note.match(/(\d{5})/);
-    const yearMonth=ymMatch?ymMatch[1]:"";
 
     // 日期
     let rocDateStr="";
@@ -3642,10 +3663,11 @@ function parseFangInvoiceXlsx(data){
     const houseMatch=matchHousing(caseName);
     const custCode=houseMatch?houseMatch.code:"";
 
-    return{invoiceNo, caseName, yearMonth, rocDateStr, rocYear, custCode, type,
-      untaxed, tax, total};
+    return{invoiceNo,caseName,yearMonth,rocDateStr,rocYear,custCode,type,untaxed,tax,
+      total:Number(r[col("總金額")])||0};
   });
 }
+
 
 function fangInvoiceAcctCode(type){
   if(type==="代管費") return "4101-02";
