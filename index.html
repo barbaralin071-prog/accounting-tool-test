@@ -3314,22 +3314,13 @@ document.getElementById("fang-3rd-btn-download").addEventListener("click",()=>{
     }
   });
 
-  // 按日期分組產出多個Excel
-  const dateGrouped=new Map();
-  rows.slice(1).forEach(row=>{
-    const d=row[3]||TODAY_ROC;
-    if(!dateGrouped.has(d)) dateGrouped.set(d,[]);
-    dateGrouped.get(d).push(row);
-  });
-
-  dateGrouped.forEach((dateRows,dateStr)=>{
-    const ws=XLSX.utils.aoa_to_sheet([rows[0],...dateRows]);
-    ws["!cols"]=[{wch:8},{wch:12},{wch:10},{wch:14},{wch:14},{wch:16},{wch:6},{wch:10},{wch:50}];
-    const wb_out=XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb_out,ws,"傳票累積檔");
-    const fileDate=dateStr.replace(/\//g,"-");
-    XLSX.writeFile(wb_out,`出款屋主_傳票匯入_${fileDate}.xlsx`);
-  });
+  // 產出單一 Excel 檔案
+  const ws=XLSX.utils.aoa_to_sheet(rows);
+  ws["!cols"]=[{wch:8},{wch:12},{wch:10},{wch:14},{wch:14},{wch:16},{wch:6},{wch:10},{wch:50},{wch:10}];
+  const wb_out=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb_out,ws,"傳票累積檔");
+  const today=TODAY_ROC.replace(/\//g,"-");
+  XLSX.writeFile(wb_out,`出款屋主_傳票匯入_${today}.xlsx`);
 });
 
 /* ══════════════════════════════════════
@@ -3708,7 +3699,7 @@ function fangInvoiceTypeName(type){
 
 let fangInvState={invoices:[]};
 
-bindDropzone("fang-inv-dz","fang-inv-file",async(file,dz)=>{
+bindDropzone("fang-3rd-dz-invoice","fang-3rd-file-invoice",async(file,dz)=>{
   try{
     const data=await readFile(file);
     fangInvState.invoices=parseFangInvoiceXlsx(data);
