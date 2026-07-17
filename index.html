@@ -3233,6 +3233,8 @@ document.getElementById("fang-3rd-btn-download").addEventListener("click",()=>{
     });
 
     if(useMethodA){
+      console.log(`=== 方案A 比對 caseName:${caseName} ym:${ym} code:${code} houseKey:${houseKey} ===`);
+      console.log(`收入列總數: ${incomeRows.length} 支出列總數: ${cfRows.length+expOther.length}`);
       // Step1：金流表收入欄（同房源+同年月）→ 反轉借方
       // 用更寬鬆的比對：caseName的任一關鍵字（去掉「居所」）
       const houseKey=caseName.replace(/居所.*$/,"").replace(/[-\s]/g,"").trim();
@@ -3247,6 +3249,7 @@ document.getElementById("fang-3rd-btn-download").addEventListener("click",()=>{
       });
 
       relIncome.forEach(r=>{
+        console.log(`  收入比對到: ${r.desc} 金額:${r.amount}`);
         const d=r.desc;
         let acct="2205-02";
         if(d.includes("代管費")||d.includes("月代管")) acct="2205-01";
@@ -3297,6 +3300,7 @@ document.getElementById("fang-3rd-btn-download").addEventListener("click",()=>{
     });
 
     // Step4：金流表屋主支出 → 最後一列
+    console.log(`cfRow: ${cfRow?cfRow.desc:'找不到'}`);
     if(cfRow){
       const totalAmt=cfRow.expense+(cfRow.transferFee||0);
       const lastRowCode=cfRow.houses[0]?.code||code;
