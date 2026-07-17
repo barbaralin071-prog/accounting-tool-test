@@ -3180,8 +3180,10 @@ document.getElementById("fang-3rd-btn-download").addEventListener("click",()=>{
   });
 
   invGroups.forEach(({invList,code,caseName,ym})=>{
-    // 找對應的屋主支出列（金流表支出欄，含「屋主」+「租金」）
+    // 房源關鍵字（去掉「居所」後綴）
     const houseKey=caseName.replace(/居所.*$/,"").replace(/[-\s]/g,"").trim();
+
+    // 找對應的屋主支出列
     const cfRow=cfRows.find(r=>{
       const descClean=r.desc.replace(/[\s]/g,"");
       const nameMatch=r.houses.some(h=>
@@ -3194,11 +3196,9 @@ document.getElementById("fang-3rd-btn-download").addEventListener("click",()=>{
     });
 
     if(useMethodA){
-      console.log(`=== 方案A 比對 caseName:${caseName} ym:${ym} code:${code} houseKey:${houseKey} ===`);
-      console.log(`收入列總數: ${incomeRows.length} 支出列總數: ${cfRows.length+expOther.length}`);
+      console.log(`=== 方案A caseName:${caseName} ym:${ym} houseKey:${houseKey} ===`);
+      console.log(`收入列:${incomeRows.length} 屋主支出:${cfRows.length} cfRow:${cfRow?.desc||'找不到'}`);
       // Step1：金流表收入欄（同房源+同年月）→ 反轉借方
-      // 用更寬鬆的比對：caseName的任一關鍵字（去掉「居所」）
-      const houseKey=caseName.replace(/居所.*$/,"").replace(/[-\s]/g,"").trim();
       const relIncome=incomeRows.filter(r=>{
         const descClean=r.desc.replace(/[\s]/g,"");
         const nameMatch=houseKey.length>=2&&(
