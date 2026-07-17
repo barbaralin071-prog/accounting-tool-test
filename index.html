@@ -3213,7 +3213,7 @@ document.getElementById("fang-3rd-btn-download").addEventListener("click",()=>{
   });
 
   invGroups.forEach(({invList,code,caseName,ym})=>{
-    // 找對應的屋主支出列（金流表支出欄）
+    // 找對應的屋主支出列（金流表支出欄，含「屋主」+「租金」）
     const cfRow=cfRows.find(r=>{
       const nameMatch=r.houses.some(h=>
         h.houseName===caseName||
@@ -3224,7 +3224,7 @@ document.getElementById("fang-3rd-btn-download").addEventListener("click",()=>{
     });
 
     if(useMethodA){
-      // 方案A：從金流表收入欄判斷科目
+      // Step1：金流表收入欄（同房源+同年月）→ 反轉借方
       const relIncome=incomeRows.filter(r=>{
         const nameMatch=r.desc.includes(caseName)||
           (code&&matchHousing(r.desc.split("-")[0].trim())?.code===code);
@@ -3241,7 +3241,7 @@ document.getElementById("fang-3rd-btn-download").addEventListener("click",()=>{
         rows.push([rocYear,"DEFAULT",3,r.date||TODAY_ROC,acct,code,1,r.amount,d,""]);
       });
 
-      // 非屋主支出（代墊款）
+      // Step3：金流表非屋主支出（同房源）→ 131450-01 貸2
       const relExp=expOther.filter(r=>{
         const nameMatch=r.desc.includes(caseName)||
           (code&&matchHousing(r.desc.split("-")[0].trim())?.code===code);
@@ -3270,22 +3270,26 @@ document.getElementById("fang-3rd-btn-download").addEventListener("click",()=>{
       });
     }
 
-    // 電子發票分錄
+    // Step2：電子發票 → 貸方
     invList.forEach(inv=>{
       const s1=`${inv.caseName}-${inv.yearMonth}-${fangInvoiceTypeName(inv.type)}`;
       const s2=`${s1}-${inv.invoiceNo}`;
-      rows.push([inv.rocYear,"DEFAULT",3,inv.rocDateStr,fangInvoiceAcctCode(inv.type),inv.custCode,2,inv.untaxed,s1,""]);
+      const invDept=inv.type==="代管費"?"002":""; // 4101-02 → 部門002
+      rows.push([inv.rocYear,"DEFAULT",3,inv.rocDateStr,fangInvoiceAcctCode(inv.type),inv.custCode,2,inv.untaxed,s1,invDept]);
       rows.push([inv.rocYear,"DEFAULT",3,inv.rocDateStr,"2290",inv.custCode,2,inv.tax,s2,""]);
     });
 
-    // 最後一列：金流表屋主支出
+    // Step4：金流表屋主支出 → 最後一列
     if(cfRow){
       const totalAmt=cfRow.expense+(cfRow.transferFee||0);
       const lastRowCode=cfRow.houses[0]?.code||code;
+      const dateStr=cfRow.date||TODAY_ROC;
+      // 匯費列（若有，部門002）
       if(cfRow.transferFee>0){
-        rows.push([rocYear,"DEFAULT",3,cfRow.date,"6270","",1,cfRow.transferFee,"匯款手續費",""]);
+        rows.push([rocYear,"DEFAULT",3,dateStr,"6270","",1,cfRow.transferFee,"匯款手續費","002"]);
       }
-      rows.push([rocYear,"DEFAULT",3,cfRow.date,"1110-01",lastRowCode,2,totalAmt,cfRow.desc,""]);
+      // 1110-01 貸2
+      rows.push([rocYear,"DEFAULT",3,dateStr,"1110-01",lastRowCode,2,totalAmt,cfRow.desc,""]);
     }
   });
 
