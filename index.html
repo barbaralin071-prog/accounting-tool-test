@@ -1362,9 +1362,13 @@ function readFile(file){
 
 function showErr(id,msg){
   const el=document.getElementById(id);
+  if(!el) return;
   el.textContent=msg; el.style.display="block";
 }
-function clearErr(id){document.getElementById(id).style.display="none";}
+function clearErr(id){
+  const el=document.getElementById(id);
+  if(el) el.style.display="none";
+}
 
 /* ══════════════════════════════════════
    解析正本金流表
@@ -3196,6 +3200,7 @@ document.getElementById("fang-3rd-btn-download").addEventListener("click",()=>{
     });
 
     if(useMethodA){
+      const groupStart=rows.length; // 記錄此房源分錄起始位置
       console.log(`=== 方案A caseName:${caseName} ym:${ym} houseKey:${houseKey} ===`);
       console.log(`收入列:${incomeRows.length} 屋主支出:${cfRows.length} cfRow:${cfRow?.desc||'找不到'}`);
       // Step1：金流表收入欄（同房源+同年月）→ 反轉借方
@@ -3219,7 +3224,7 @@ document.getElementById("fang-3rd-btn-download").addEventListener("click",()=>{
         rows.push([rocYear,"DEFAULT",3,r.date||TODAY_ROC,acct,code,1,r.amount,d,""]);
       });
 
-      // Step3：金流表非屋主支出（同房源）→ 131450-01 貸2
+      // Step3：金流表非屋主支出（同房源+同年月）→ 131450-01 貸2
       const relExp=expOther.filter(r=>{
         const descClean=r.desc.replace(/[\s]/g,"");
         const nameMatch=houseKey.length>=2&&(
@@ -3232,6 +3237,9 @@ document.getElementById("fang-3rd-btn-download").addEventListener("click",()=>{
       relExp.forEach(r=>{
         rows.push([rocYear,"DEFAULT",3,r.date||TODAY_ROC,"131450-01",code,2,r.expense,r.desc,""]);
       });
+
+      // 借貸平衡檢查
+
 
     }else{
       // 原本邏輯：傳票反轉
@@ -3266,12 +3274,19 @@ document.getElementById("fang-3rd-btn-download").addEventListener("click",()=>{
       const totalAmt=cfRow.expense+(cfRow.transferFee||0);
       const lastRowCode=cfRow.houses[0]?.code||code;
       const dateStr=cfRow.date||TODAY_ROC;
-      // 匯費列（若有，部門002）
       if(cfRow.transferFee>0){
         rows.push([rocYear,"DEFAULT",3,dateStr,"6270","",1,cfRow.transferFee,"匯款手續費","002"]);
       }
-      // 1110-01 貸2
       rows.push([rocYear,"DEFAULT",3,dateStr,"1110-01",lastRowCode,2,totalAmt,cfRow.desc,""]);
+    }
+
+    // 借貸平衡檢查
+    const groupRows=rows.slice(groupStart);
+    const debit=groupRows.filter(r=>r[6]===1).reduce((s,r)=>s+(Number(r[7])||0),0);
+    const credit=groupRows.filter(r=>r[6]===2).reduce((s,r)=>s+(Number(r[7])||0),0);
+    if(Math.abs(debit-credit)>1){
+      rows.push([rocYear,"DEFAULT",3,TODAY_ROC,"⚠","",0,0,
+        `【借貸不平衡】${caseName}-${ym} 借方${debit}≠貸方${credit} 差額${debit-credit}`,""]);
     }
   });
 
@@ -3698,7 +3713,8 @@ function renderFangInvPreview(){
     `共 ${invs.length} 張｜未稅 ${fmtMoney(tUntax)}｜稅額 ${fmtMoney(tTax)}｜含稅 ${fmtMoney(tTotal)}`;
 }
 
-document.getElementById("fang-inv-reset").addEventListener("click",()=>{
+const _fangInvResetBtn=document.getElementById("fang-inv-reset");
+if(_fangInvResetBtn) _fangInvResetBtn.addEventListener("click",()=>{
   fangInvState={invoices:[]};
   const dz=document.getElementById("fang-inv-dz");
   dz.classList.remove("loaded");
