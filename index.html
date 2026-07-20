@@ -1624,24 +1624,37 @@ bindDropzone("fang-dz-receipt","fang-file-receipt",async(file,dz)=>{
 });
 
 function updateFangMatchBtn(){
-  document.getElementById("fang-btn-match").disabled=!(fangState.bank&&fangState.third);
+  // 只需要網銀就可以比對（帳務報表和收款單選填）
+  document.getElementById("fang-btn-match").disabled=!fangState.bank;
 }
 
 document.getElementById("fang-btn-match").addEventListener("click",()=>{
   clearErr("fang-err");
-  const res=reconcile(fangState.third, fangState.bank);
-  fangState.matched=res.matched;
-  fangState.unmatched=res.unmatched;
 
+  fangState.matched=[];
+  fangState.unmatched=[];
   fangState.bankonlyMatched=[];
   fangState.bankonlyUnmatched=[];
-  if(fangState.receipt && fangState.receipt.length>0){
-    const res2=reconcile(fangState.receipt, res.bankOnly);
+
+  let bankRemaining=fangState.bank.slice(); // 未比對的網銀列
+
+  // 第一輪：帳務報表比對（選填）
+  if(fangState.third&&fangState.third.length>0){
+    const res=reconcile(fangState.third, bankRemaining);
+    fangState.matched=res.matched;
+    fangState.unmatched=res.unmatched;
+    bankRemaining=res.bankOnly;
+  }
+
+  // 第二輪：收款單比對（選填）
+  if(fangState.receipt&&fangState.receipt.length>0){
+    const res2=reconcile(fangState.receipt, bankRemaining);
     fangState.bankonlyMatched=res2.matched;
     fangState.bankonlyUnmatched=res2.bankOnly;
   }else{
-    fangState.bankonlyUnmatched=res.bankOnly;
+    fangState.bankonlyUnmatched=bankRemaining;
   }
+
   renderFangResult();
 });
 
@@ -2976,7 +2989,10 @@ function parseVoucherXlsx(data){
 // 解析金流表找屋主支出列
 function parseCashflowForThird(data){
   const wb=XLSX.read(data,{type:"array"});
-  const ws=wb.Sheets[wb.SheetNames[0]];
+  // 找含「世貿」「14432」「房務」的工作頁，找不到則用第一個
+  const sheetName=wb.SheetNames.find(n=>n.includes("世貿")||n.includes("14432")||n.includes("房務"))
+    ||wb.SheetNames[0];
+  const ws=wb.Sheets[sheetName];
   const aoa=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null});
   const rows=[];         // 屋主支出列（主軸）
   const incomeRows=[];   // 收入列
@@ -3187,6 +3203,8 @@ document.getElementById("fang-3rd-btn-download").addEventListener("click",()=>{
   });
 
   invGroups.forEach(({invList,code,caseName,ym})=>{
+    const groupStart=rows.length; // 記錄此房源分錄起始位置
+
     // 房源關鍵字（去掉「居所」後綴）
     const houseKey=caseName.replace(/居所.*$/,"").replace(/[-\s]/g,"").trim();
 
@@ -3203,7 +3221,6 @@ document.getElementById("fang-3rd-btn-download").addEventListener("click",()=>{
     });
 
     if(useMethodA){
-      const groupStart=rows.length; // 記錄此房源分錄起始位置
       console.log(`=== 方案A caseName:${caseName} ym:${ym} houseKey:${houseKey} ===`);
       console.log(`收入列:${incomeRows.length} 屋主支出:${cfRows.length} cfRow:${cfRow?.desc||'找不到'}`);
       // Step1：金流表收入欄（同房源+同年月）→ 反轉借方
@@ -3227,19 +3244,47 @@ document.getElementById("fang-3rd-btn-download").addEventListener("click",()=>{
         rows.push([rocYear,"DEFAULT",3,r.date||TODAY_ROC,acct,code,1,r.amount,d,""]);
       });
 
-      // Step3：金流表非屋主支出（同房源+同年月）→ 131450-01 貸2
-      const relExp=expOther.filter(r=>{
-        const descClean=r.desc.replace(/[\s]/g,"");
-        const nameMatch=houseKey.length>=2&&(
-          descClean.includes(houseKey)||
-          r.desc.includes(caseName)||
-          (code&&matchHousing(r.desc.split("-")[0].trim())?.code===code));
-        const ymMatch=!ym||r.desc.includes(ym);
-        return nameMatch&&ymMatch;
-      });
-      relExp.forEach(r=>{
-        rows.push([rocYear,"DEFAULT",3,r.date||TODAY_ROC,"131450-01",code,2,r.expense,r.desc,""]);
-      });
+      // Step3：先算差額，再從金流表找能平衡的支出項目
+      const curDebit=rows.slice(groupStart).filter(r=>r[6]===1).reduce((s,r)=>s+(Number(r[7])||0),0);
+      const curCredit=rows.slice(groupStart).filter(r=>r[6]===2).reduce((s,r)=>s+(Number(r[7])||0),0);
+      const ownerAmt=cfRow?Math.round(cfRow.expense+(cfRow.transferFee||0)):0;
+      const gap=Math.round(curDebit-curCredit-ownerAmt);
+      console.log(`差額: 借${curDebit} 貸${curCredit} 屋主${ownerAmt} gap=${gap}`);
+
+      if(gap>0){
+        // 候選：同房源非屋主支出（不限年月）
+        const candidates=expOther.filter(r=>{
+          const dk=r.desc.replace(/[\s]/g,"");
+          const hk=houseKey.replace(/[\s]/g,"");
+          return hk.length>=2&&(dk.includes(hk)||r.desc.includes(caseName));
+        }).map(r=>{
+          // 合拆格式取對應房源金額
+          const m=r.desc.match(new RegExp(houseKey.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"[^、，]*?\\$([\\d,]+)"));
+          const itemAmt=m?parseInt(m[1].replace(/,/g,"")):Math.round(r.expense);
+          return{...r,itemAmt};
+        });
+        console.log(`候選 ${candidates.length} 筆`);
+
+        // 枚舉子集找加總 = gap（最多8筆）
+        const limit=Math.min(candidates.length,8);
+        let found=null;
+        for(let mask=1;mask<(1<<limit);mask++){
+          let sum=0; const sel=[];
+          for(let i=0;i<limit;i++){
+            if(mask&(1<<i)){sum+=candidates[i].itemAmt;sel.push(candidates[i]);}
+          }
+          if(Math.abs(sum-gap)<=1){found=sel;break;}
+        }
+
+        if(found){
+          found.forEach(r=>{
+            rows.push([rocYear,"DEFAULT",3,r.date||TODAY_ROC,"131450-01",code,2,r.itemAmt,r.desc,""]);
+          });
+          console.log(`✓ 找到平衡組合 ${found.length} 筆`);
+        }else{
+          console.log(`✗ 找不到平衡組合，差額 ${gap}`);
+        }
+      }
 
       // 借貸平衡檢查
 
@@ -3264,9 +3309,10 @@ document.getElementById("fang-3rd-btn-download").addEventListener("click",()=>{
 
     // Step2：電子發票 → 貸方
     invList.forEach(inv=>{
+      // 摘要：直接用案件名稱（不用備註原文）
       const s1=`${inv.caseName}-${inv.yearMonth}-${fangInvoiceTypeName(inv.type)}`;
       const s2=`${s1}-${inv.invoiceNo}`;
-      const invDept=inv.type==="代管費"?"002":""; // 4101-02 → 部門002
+      const invDept=(inv.type==="代管費"||inv.type==="系統服務費")?"002":"";
       rows.push([inv.rocYear,"DEFAULT",3,inv.rocDateStr,fangInvoiceAcctCode(inv.type),inv.custCode,2,inv.untaxed,s1,invDept]);
       rows.push([inv.rocYear,"DEFAULT",3,inv.rocDateStr,"2290",inv.custCode,2,inv.tax,s2,""]);
     });
@@ -3334,15 +3380,27 @@ function parseBizInvoiceXlsx(data){
 // 解析業務處金流表
 function parseBizCashflowXlsx(data){
   const wb=XLSX.read(data,{type:"array"});
-  const ws=wb.Sheets[wb.SheetNames[0]];
+  // 找含「仁愛」或「57668」的工作頁，找不到則用第一個
+  const sheetName=wb.SheetNames.find(n=>n.includes("仁愛")||n.includes("57668"))
+    ||wb.SheetNames[0];
+  const ws=wb.Sheets[sheetName];
   const aoa=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null});
   const rows=[];
-  let currentDate="";
+  let currentDate=TODAY_ROC;
   for(const r of aoa){
-    const dateCell=r[0]?String(r[0]).trim():"";
-    if(dateCell&&/\d+月\d+日/.test(dateCell)) currentDate=dateCell;
-    else if(r[0] instanceof Date){
-      try{const roc=toRoc(r[0]);currentDate=roc.month+"月"+roc.day+"日";}catch(e){}
+    // 日期欄位解析，轉成民國格式 115/06/01
+    if(r[0]!=null){
+      try{
+        const roc=toRoc(r[0]);
+        currentDate=`${roc.year}/${pad2(roc.month)}/${pad2(roc.day)}`;
+      }catch(e){
+        const s=String(r[0]).trim();
+        const mMatch=s.match(/^(\d+)月(\d+)日$/);
+        if(mMatch){
+          const yr=currentDate?parseInt(currentDate.split("/")[0]):115;
+          currentDate=`${yr}/${pad2(parseInt(mMatch[1]))}/${pad2(parseInt(mMatch[2]))}`;
+        }
+      }
     }
     const desc=r[1]?String(r[1]).replace(/[\r\n]+/g," ").trim():"";
     const income=r[3]?Number(r[3]):null;
@@ -3553,7 +3611,11 @@ document.getElementById("biz-inv-btn-voucher").addEventListener("click",()=>{
     const{cfRow,invs,isOwner,isTenant}=item;
     const addr=invs[0].caseAddr||cfRow.desc.split("-")[0];
     const rocYear=invs[0].rocYear||115;
-    const dateStr=cfRow.date||"";
+
+    // 日期格式轉換：「6月1日」→「115/06/01」
+    let dateStr=cfRow.date||TODAY_ROC;
+    const mMatch=dateStr.match(/^(\d+)月(\d+)日$/);
+    if(mMatch) dateStr=`${rocYear}/${pad2(parseInt(mMatch[1]))}/${pad2(parseInt(mMatch[2]))}`;
 
     // 借方摘要：用金流表說明（去掉發票號碼部分）
     const debitSummary=cfRow.desc.replace(/-[A-Z]{2}[\-\d]+/g,"").replace(/-+$/,"").trim();
@@ -3615,7 +3677,14 @@ function parseFangInvoiceXlsx(data){
       // 找房源名稱（非數字、非年月的部分）
       const namePart=parts.find(p=>!/^\d+$/.test(p)&&p!==ymPart);
       // 去掉費用名稱（代管費/修繕費等）
-      caseName=namePart?namePart.replace(/代管費|修繕費|系統費|服務費/g,"").trim():"";
+      // 去掉費用名稱和括號內容
+      caseName=namePart
+        .replace(/代管費|修繕費|系統費|服務費|管理服務費|管理費/g,"")
+        .replace(/管理\d*/g,"")      // 去掉「管理」+數字
+        .replace(/\([^)]*\)/g,"")   // 去掉半形括號
+        .replace(/（[^）]*）/g,"")  // 去掉全形括號
+        .replace(/[-\s]+$/,"")      // 去掉結尾的 - 和空白
+        .trim();
       if(!caseName&&brandName) caseName=brandName;
 
     }else{
